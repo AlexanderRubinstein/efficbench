@@ -1,2 +1,9 @@
 envs
 __pycache__
+experiment_configs
+experiments
+inputs
+tmp
+data
+plots
+results_non_gen
