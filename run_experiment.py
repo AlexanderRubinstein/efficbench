@@ -27,7 +27,7 @@ def get_data(bench, split):
         elif split == 'noniid2':
             set_of_rows = [list(range(200))]
         elif split == 'noniid3':
-            set_of_rows = [list(range(300))] 
+            set_of_rows = [list(range(300))]
 
         print(len(set_of_rows[0]), len(data['models']))
 
@@ -42,8 +42,8 @@ def get_data(bench, split):
         #split
         if split == 'iid':
             set_of_rows = [[0,11,22],
-                           [1,12,23], 
-                           [2,13,24], 
+                           [1,12,23],
+                           [2,13,24],
                            [3,14,25],
                            [4,15,26],
                            [5,16,27],
@@ -51,7 +51,7 @@ def get_data(bench, split):
                            [7,18,29],
                            [8,19],
                            [9,20],
-                           [10,21]] 
+                           [10,21]]
         else:
             set_of_rows = [[0,1], #AI: Yi
                            [2,3,4], #AlephAlpha_luminous
@@ -87,7 +87,7 @@ def get_data(bench, split):
             set_of_rows = [list(range(50))]
         elif split == 'noniid3':
             set_of_rows = [list(range(75))]
- 
+
         print(len(set_of_rows[0]), len(data['models']))
 
     # Loading data
@@ -134,7 +134,7 @@ def get_data(bench, split):
             set_of_rows = [[i for i,m in enumerate(data['models']) if np.sum([t in m for t in temp])>0] for temp in templates]
 
         elif split == 'noniid2': #size
-            sizes = [['65b']] 
+            sizes = [['65b']]
             set_of_rows = [[i for i,m in enumerate(data['models']) if np.sum([t in m for t in size])>0] for size in sizes]
 
         elif split == 'noniid3': #same vs cross instr
@@ -144,23 +144,24 @@ def get_data(bench, split):
         else:
             raise NotImplementedError
 
-        print(len(set_of_rows[0]), len(data['models'])) 
+        print(len(set_of_rows[0]), len(data['models']))
 
     else:
         raise NotImplementedError
-    
+
     return data, scenarios, set_of_rows
 
 
 if __name__ == "__main__":
-    
+
     # User input
     parser = argparse.ArgumentParser(description='Example script with named arguments.')
 
-    parser.add_argument('--bench', type=str, help='Benchmark (helm_lite, lb, mmlu, alpaca, icl_templates)', default = 'lb')
-    parser.add_argument('--split', type=str, help='iid/noniid/noniid2/noniid3', default = 'iid')
-    parser.add_argument('--iterations', type=int, help='iterations', default = 3)
-    parser.add_argument('--device', type=str, help='cpu/cuda', default = 'cpu')
+    parser.add_argument('--bench', type=str, help='Benchmark (helm_lite, lb, mmlu, alpaca, icl_templates)', default='lb')
+    parser.add_argument('--split', type=str, help='iid/noniid/noniid2/noniid3', default='iid')
+    parser.add_argument('--iterations', type=int, help='iterations', default=3)
+    parser.add_argument('--device', type=str, help='cpu/cuda', default='cpu')
+    parser.add_argument('--num_workers', type=int, help='number of workers', default=12)
 
     args = parser.parse_args()
     bench = args.bench
@@ -174,17 +175,17 @@ if __name__ == "__main__":
 
     # Defining other parameters
     Ds = [2, 5, 10, 15]
-    sampling_names = ['random', 'anchor', 'anchor-irt']# or ['adaptive'] 
+    sampling_names = ['random', 'anchor', 'anchor-irt']# or ['adaptive']
 
     scenario_name = 'full' #we are evaluating all scenarios at once (this is just a nomination)
 
     data, scenarios, set_of_rows = get_data(bench, split)
-    
+
     chosen_scenarios = list(scenarios.keys())
 
 
     # ## Results
-    results_full, accs_full, sampling_time_dic = evaluate_scenarios(data, scenario_name, chosen_scenarios, scenarios, set_of_rows, Ds, iterations, device, bench='irt_'+bench, split=split, sampling_names = sampling_names)
+    results_full, accs_full, sampling_time_dic = evaluate_scenarios(data, scenario_name, chosen_scenarios, scenarios, set_of_rows, Ds, iterations, device, bench='irt_'+bench, split=split, sampling_names = sampling_names, num_workers=args.num_workers)
 
     with open(f'results/results_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
         pickle.dump(results_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
