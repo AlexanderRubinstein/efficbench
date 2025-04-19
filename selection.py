@@ -11,51 +11,51 @@ from utils import *
 from copy import copy
 
 def get_random(scenarios_choosen, scenarios, number_item, subscenarios_position, responses_test, balance_weights, random_seed):
-    
+
     """
     Stratified sample items (seen_items). 'unseen_intems' gives the complement.
-    
+
     Parameters:
     - scenarios_choosen: A list of considered scenarios.
     - scenarios: A dictionary where keys are scenario identifiers and values are lists of subscenarios.
     - number_item: The total number of items to be considered across all chosen scenarios.
-    - subscenarios_position: A nested dictionary where the first key is the scenario and the second key is the subscenario, 
+    - subscenarios_position: A nested dictionary where the first key is the scenario and the second key is the subscenario,
       and the value is a list of item positions for that subscenario.
     - responses_test: A numpy array of the test subject's responses to all items. (this is only used to get the number of items)
-    
+
     Returns:
     - seen_items: A list of item indices that the subject has been exposed to.
     - unseen_items: A list of item indices that the subject has not been exposed to.
     """
-    
+
     random.seed(random_seed)
-    
+
     def shuffle_list(lista):
         """
         Shuffles a list in place and returns the shuffled list.
-        
+
         Parameters:
         - lista: The list to be shuffled.
-        
+
         Returns:
         - A shuffled version of the input list.
         """
         return random.sample(lista, len(lista))
 
-    
+
     seen_items = []  # Initialize an empty list to hold the indices of seen items.
     item_weights = {}
-    
+
     # Iterate through each chosen scenario to determine the seen items.
     for scenario in scenarios_choosen:
 
         seen_items_scenario = []
-        
+
         # Allocate the number of items to be seen in each subscenario.
         number_items_sub = np.zeros(len(scenarios[scenario])).astype(int)
         number_items_sub += number_item // len(scenarios[scenario])
         number_items_sub[:(number_item - number_items_sub.sum())] += 1
-        
+
         i = 0  # Initialize a counter for the subscenarios.
         # Shuffle the subscenarios and iterate through them to select seen items.
         for sub in shuffle_list(scenarios[scenario]):
@@ -64,9 +64,9 @@ def get_random(scenarios_choosen, scenarios, number_item, subscenarios_position,
             i += 1
 
         item_weights[scenario] = np.ones(number_item)/number_item
-  
+
         seen_items += seen_items_scenario
-        
+
     # Determine the unseen items by finding all item indices that are not in the seen items list.
     unseen_items = [i for i in range(responses_test.shape[1]) if i not in seen_items]
 
@@ -83,11 +83,11 @@ def select_initial_adaptive_items(A, B, Theta, number_item, try_size=2000, seed=
     return seen_items, unseen_items, mats
 
 
-def run_adaptive_selection(responses_test, 
-                           initial_items, 
-                           scenarios_choosen, 
-                           scenarios_position, 
-                           A, B, num_items, 
+def run_adaptive_selection(responses_test,
+                           initial_items,
+                           scenarios_choosen,
+                           scenarios_position,
+                           A, B, num_items,
                            balance_weights,
                            balance=True
                            ):
@@ -96,7 +96,7 @@ def run_adaptive_selection(responses_test,
     num_items_count = [len(scenarios_choosen) * n for n in num_items]
     max_count, min_count = max(num_items_count), min(num_items_count)
     item_weights, all_seen_items, all_unseen_items = {}, {}, {}
-    
+
     if (min_count / 3) < len(seen_items):
         seen_items = seen_items[:int(min_count / 3)]
 
@@ -104,7 +104,7 @@ def run_adaptive_selection(responses_test,
 
     #assert len(seen_items) <= target_count
     count = len(seen_items)
-        
+
     scenario_occurrences = {scenario: 0 for scenario in scenarios_choosen}
 
     for item in seen_items:
@@ -116,7 +116,7 @@ def run_adaptive_selection(responses_test,
             if count in num_items_count:
                 # save intermediate num_items
                 current_num_items = int(count / len(scenarios_choosen))
-                
+
                 #item_weights[current_num_items] = get_weighing_adaptive(seen_items, unseen_items, scenarios_position, scenarios_choosen, A, B, balance_weights)
                 item_weights[current_num_items] = {scenario: np.array([occurrences/(count**2)]*occurrences) for scenario, occurrences in scenario_occurrences.items()}
                 all_seen_items[current_num_items] = copy(seen_items)
@@ -125,15 +125,15 @@ def run_adaptive_selection(responses_test,
             if count >= max_count:
                 # return if largest num_items is reached
                 return item_weights, all_seen_items, all_unseen_items
-            
-            seen_items, unseen_items, scenario_of_item = select_next_adaptive_item(responses_test, seen_items, unseen_items, scenario, 
+
+            seen_items, unseen_items, scenario_of_item = select_next_adaptive_item(responses_test, seen_items, unseen_items, scenario,
                                                                                    scenarios_position, A, B, mats, balance)
-            
+
             scenario_occurrences[scenario_of_item] += 1
             count += 1
 
 def select_next_adaptive_item(responses_test, seen_items, unseen_items, scenario, scenarios_position, A, B, mats, balance):
-    
+
     D = A.shape[1]
 
     if balance:
@@ -149,7 +149,7 @@ def select_next_adaptive_item(responses_test, seen_items, unseen_items, scenario
     I_unseen = ((P * (1 - P))[:, None, None] * mats)[unseen_items_scenario]
 
     # Select the next item based on the maximum determinant of information
-    next_item = unseen_items_scenario[np.argmax(np.linalg.det(I_seen[None, :, :] + I_unseen))]                    
+    next_item = unseen_items_scenario[np.argmax(np.linalg.det(I_seen[None, :, :] + I_unseen))]
     seen_items.append(next_item)
     unseen_items.remove(next_item)
     scenario_item = find_scenario_from_position(scenarios_position, next_item)
@@ -163,7 +163,7 @@ def find_scenario_from_position(scenarios_position, position):
     return None
 
 def get_weighing_adaptive(seen_items: list,
-                       unseen_items: list, 
+                       unseen_items: list,
                        scenarios_position: list,
                        chosen_scenarios: list,
                        A: np.array,
@@ -186,14 +186,14 @@ def get_weighing_adaptive(seen_items: list,
 
             scenario_seen_items = [s for s in seen_items if s in scenarios_position[scenario]]
 
-            weights[scenario] = get_weights(IRT_params, 
+            weights[scenario] = get_weights(IRT_params,
                                             scenario_seen_items,
                                             scenario_idxs,
                                             balance_weights,
                                             scenario,
                                             scenarios_position,)
     else:
-        weights['all'] = get_weights(IRT_params, 
+        weights['all'] = get_weights(IRT_params,
                                      seen_items,
                                      unseen_items)
 
@@ -229,7 +229,7 @@ def get_weights(IRT_params: np.array,
 
         # Find the index of the closest seen item
         closest_indices[i] = np.argmin(distances)
-    
+
     item_weights = np.array([norm_balance_weights[closest_indices==i].sum() for i in range(len(seen_items))])
 
     return item_weights
@@ -254,11 +254,11 @@ def get_anchor(scores_train, chosen_scenarios, scenarios_position, number_item, 
         anchor_points[scenario] = {}
         anchor_weights[scenario] = {}
         anchor_points[scenario], anchor_weights[scenario] = get_anchor_points_weights(scores_train, scenarios_position, scenario, number_item, balance_weights, random_seed)
-    
+
     seen_items = [list(np.array(scenarios_position[scenario])[anchor_points[scenario]]) for scenario in chosen_scenarios]
     seen_items = list(np.array(seen_items).reshape(-1))
     unseen_items = [i for i in range(scores_train.shape[1]) if i not in seen_items]
-    
+
     return anchor_points, anchor_weights, seen_items, unseen_items
 
 
@@ -277,7 +277,7 @@ def get_anchor_points_weights(scores_train, scenarios_position, scenario, number
     tuple: A tuple containing the anchor points and anchor weights.
     """
     trials = 5
-    
+
     assert np.mean(balance_weights<0)==0
     norm_balance_weights = balance_weights[scenarios_position[scenario]]
     norm_balance_weights /= norm_balance_weights.sum()
@@ -286,17 +286,17 @@ def get_anchor_points_weights(scores_train, scenarios_position, scenario, number
     X = scores_train[:,scenarios_position[scenario]].T
     kmeans_models = [KMeans(n_clusters=number_item, random_state=1000*t+random_seed, n_init="auto").fit(X, sample_weight=norm_balance_weights) for t in range(trials)]
     kmeans = kmeans_models[np.argmin([m.inertia_ for m in kmeans_models])]
-    
+
     # Calculating anchor points
     anchor_points = pairwise_distances(kmeans.cluster_centers_, X, metric='euclidean').argmin(axis=1)
-    
+
     # Calculating anchor weights
     anchor_weights = np.array([np.sum(norm_balance_weights[kmeans.labels_==c]) for c in range(number_item)])
     assert abs(anchor_weights.sum()-1)<1e-5
-    
+
     return anchor_points, anchor_weights
 
-def sample_items(number_item, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position, 
+def sample_items(number_item, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position,
                  responses_test, scores_train, scenarios_position, A, B, balance_weights
                  ):
     assert 'adaptive' not in sampling_name
@@ -312,11 +312,14 @@ def sample_items(number_item, iterations, sampling_name, chosen_scenarios, scena
             _, item_weights, seen_items, unseen_items = get_anchor(scores_train, chosen_scenarios, scenarios_position, number_item, balance_weights, random_seed=it)
 
         elif sampling_name == 'anchor-irt':
-            _, item_weights, seen_items, unseen_items = get_anchor(np.vstack((A.squeeze(), B.reshape((1,-1)))), chosen_scenarios, scenarios_position, number_item, balance_weights, random_seed=it)
+            A = A.squeeze()
+            B = B.squeeze().reshape(A.shape)
+            # _, item_weights, seen_items, unseen_items = get_anchor(np.vstack((A.squeeze(), B.reshape((1,-1)))), chosen_scenarios, scenarios_position, number_item, balance_weights, random_seed=it)
+            _, item_weights, seen_items, unseen_items = get_anchor(np.vstack((A, B)), chosen_scenarios, scenarios_position, number_item, balance_weights, random_seed=it)
 
         else:
             raise NotImplementedError
-            
+
 
         item_weights_dic[it], seen_items_dic[it], unseen_items_dic[it] = item_weights, seen_items, unseen_items
 
@@ -325,17 +328,17 @@ def sample_items(number_item, iterations, sampling_name, chosen_scenarios, scena
 
     return item_weights_dic, seen_items_dic, unseen_items_dic, elapsed_time
 
-def sample_items_adaptive(number_items, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position, 
+def sample_items_adaptive(number_items, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position,
                  responses_model, scores_train, scenarios_position, A, B, balance_weights,
                  initial_items=None, balance=True,
                  ):
     assert 'adaptive' in sampling_name
-    
+
     # list of different num_items results for one model
     start_time = time.time()
-    item_weights_model, seen_items_model, unseen_items_model = run_adaptive_selection(responses_model, initial_items, 
-                                                                                      chosen_scenarios, 
-                                                                                      scenarios_position, A, B, 
+    item_weights_model, seen_items_model, unseen_items_model = run_adaptive_selection(responses_model, initial_items,
+                                                                                      chosen_scenarios,
+                                                                                      scenarios_position, A, B,
                                                                                       number_items, balance_weights, balance=balance)
     end_time = time.time()
     elapsed_time = end_time - start_time
