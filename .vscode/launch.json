@@ -5,17 +5,29 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Experiment MMLU",
+            "name": "Run Experiment",
             "type": "debugpy",
             "request": "launch",
             "program": "run_experiment.py",
             "args": [
-                "--bench", "mmlu",
-                "--split", "iid",
-                "--iterations", "5",
-                "--device", "cuda"
+                "--bench",
+                // "mmlu",
+                "mmlu_fields",
+                "--split",
+                "iid",
+                "--iterations",
+                "5",
+                "--device",
+                "cuda"
             ],
             "console": "integratedTerminal",
+        },
+        {
+            "name": "Generate Table Average",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/generate_table_avg.py",
+            "console": "integratedTerminal"
         }
     ]
 }
