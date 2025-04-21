@@ -14,6 +14,7 @@ from plots import (
     agg_metric,
     load_scores
 )
+from utils import dump_pickle
 sys.path.pop(0)
 
 
@@ -40,11 +41,14 @@ def main():
             table_std[bench][split] = {}
             # model_perf[bench][split] = {}
 
-            with open(f'results/accs_{bench}_split-{split}_iterations-5.pickle', 'rb') as handle:
+            full_results_path = f'results/accs_{bench}_split-{split}_iterations-5.pickle'
+
+            with open(full_results_path, 'rb') as handle:
                 data = pickle.load(handle)
 
             models = list(data.keys())
             number_items = list(data[models[0]].keys())
+            methods = list(data[models[0]][number_items[0]].keys())
             scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
             data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
             scores = load_scores(bench, split)
@@ -135,8 +139,11 @@ def main():
                         table_avg[bench][split][method][number_item] = np.mean(data, axis=-1)[i,j]
                         table_std[bench][split][method][number_item] = data.std(-1)[i,j]
 
-        with open('results/table_avg.pickle', 'wb') as handle:
-            pickle.dump(table_avg, handle)
+        # with open('results/table_avg.pickle', 'wb') as handle:
+        #     pickle.dump(table_avg, handle)
+        dump_pickle(table_avg, 'results/table_avg.pickle')
+
+        dump_pickle(table_std, 'results/table_std.pickle')
 
 
 if __name__ == '__main__':

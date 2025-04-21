@@ -4,7 +4,18 @@ import pandas as pd
 import argparse
 from scipy import stats
 from experiments import *
-from utils import *
+from utils import (
+    # get_lambda,
+    # SuppressPrints,
+    # sigmoid,
+    # item_curve,
+    # item_response_function,
+    # prepare_data,
+    # dump_pickle,
+    load_pickle,
+    alpaca_scenarios,
+    icl_templates_scenarios
+)
 
 #python run_experiment.py --bench 'mmlu' --split 'iid' --iterations 5 --device 'cuda'
 #python run_experiment.py --bench 'helm_lite' --split 'noniid' --iterations 5 --device 'cuda'
@@ -162,6 +173,8 @@ if __name__ == "__main__":
     parser.add_argument('--iterations', type=int, help='iterations', default=3)
     parser.add_argument('--device', type=str, help='cpu/cuda', default='cpu')
     parser.add_argument('--num_workers', type=int, help='number of workers', default=12)
+    parser.add_argument('--skip_irt', action='store_true', help='skip irt')
+    parser.add_argument('--cache_path', type=str, help='cache path', default=None)
 
     args = parser.parse_args()
     bench = args.bench
@@ -184,14 +197,46 @@ if __name__ == "__main__":
     chosen_scenarios = list(scenarios.keys())
 
 
-    # ## Results
-    results_full, accs_full, sampling_time_dic = evaluate_scenarios(data, scenario_name, chosen_scenarios, scenarios, set_of_rows, Ds, iterations, device, bench='irt_'+bench, split=split, sampling_names = sampling_names, num_workers=args.num_workers)
+    if args.cache_path is not None:
+        if os.path.exists(args.cache_path):
+            cache = load_pickle(args.cache_path)
+        else:
+            dirname = os.path.dirname(args.cache_path)
+            if dirname != '':
+                os.makedirs(dirname, exist_ok=True)
+            cache = {"cache_path": args.cache_path}
+    else:
+        cache = None
 
-    with open(f'results/results_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    # ## Results
+    results_full, accs_full, sampling_time_dic = evaluate_scenarios(
+        data,
+        scenario_name,
+        chosen_scenarios,
+        scenarios,
+        set_of_rows,
+        Ds,
+        iterations,
+        device,
+        bench='irt_'+bench,
+        split=split,
+        sampling_names=sampling_names,
+        num_workers=args.num_workers,
+        skip_irt=args.skip_irt,
+        cache=cache
+    )
+
+    dump_pickle(cache, args.cache_path)
+
+    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}.pickle'
+    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}.pickle'
+    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}.pickle'
+
+    with open(results_full_path, 'wb') as handle:
         pickle.dump(results_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(f'results/accs_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    with open(accs_full_path, 'wb') as handle:
         pickle.dump(accs_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    with open(samplingtime_full_path, 'wb') as handle:
         pickle.dump(sampling_time_dic, handle, protocol=pickle.HIGHEST_PROTOCOL)

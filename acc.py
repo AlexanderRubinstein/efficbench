@@ -2,10 +2,10 @@ from irt import *
 from utils import *
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
-    
+
     """
     Compute the PIRT or CIRT
-    
+
     Parameters:
     - scenario: The scenario being considered.
     - scenarios_position: A dictionary mapping each scenario to the positions of its items.
@@ -16,49 +16,75 @@ def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen
     - theta: The ability parameter of the subject.
     - balance_weights: balancing weights (mmlu/civil comments).
     - thresh: classification threshold for CIRT (if None, PIRT will be computed).
-    
+
     Returns:
     - The computed accuracy for the scenario.
     """
 
-    # Determine the weighting parameter 
+    # Determine the weighting parameter
     lambd = len([s for s in seen_items if s in scenarios_position[scenario]])/len(scenarios_position[scenario])
-    
-    # Compute the second part of the accuracy equation based on unseen items (and IRT model) 
+
+    # Compute the second part of the accuracy equation based on unseen items (and IRT model)
     D = A.shape[1] # The number of dimensions in the IRT model
     if thresh==None:
         irt_part = (balance_weights*item_curve(theta.reshape(1, D, 1), A, B))[0, [u for u in unseen_items if u in scenarios_position[scenario]]].mean()
     else:
         irt_part = (balance_weights*(item_curve(theta.reshape(1, D, 1), A, B)>=thresh).astype(float))[0, [u for u in unseen_items if u in scenarios_position[scenario]]].mean()
-    
+
     return lambd * data_part + (1 - lambd) * irt_part
 
-def calculate_accuracies(j, sampling_names, item_weights_dic, seen_items_dic, unseen_items_dic, A, B, scores_test, responses_test, scenarios_position, chosen_scenarios, balance_weights, opt_lambds, rows_to_hide):
+def calculate_accuracies(
+    j,
+    sampling_names,
+    item_weights_dic,
+    seen_items_dic,
+    unseen_items_dic,
+    A,
+    B,
+    scores_test,
+    responses_test,
+    scenarios_position,
+    chosen_scenarios,
+    balance_weights,
+    opt_lambds,
+    rows_to_hide,
+    skip_irt=False
+):
 
-    number_items = list(item_weights_dic[sampling_names[0]].keys())
-    
-    
+    # number_items = list(item_weights_dic[sampling_names[0]].keys())
+    key_from_item_weights_dic = list(item_weights_dic.keys())[0]
+    number_items = list(item_weights_dic[key_from_item_weights_dic].keys())
+
     # Creating output format
     accs = {rows_to_hide[j]: {}}
     for number_item in number_items:
-        accs[rows_to_hide[j]][number_item] = {} 
+        accs[rows_to_hide[j]][number_item] = {}
         for est in ['naive', 'pirt', 'cirt', 'gpirt']:
+            if skip_irt and est in ['pirt', 'cirt', 'gpirt']:
+                continue
             for sampling_name in sampling_names:
+                if skip_irt and sampling_name == 'anchor-irt':
+                    continue
                 accs[rows_to_hide[j]][number_item][sampling_name+'_'+est] = {}
                 for scenario in chosen_scenarios:
                     accs[rows_to_hide[j]][number_item][sampling_name+'_'+est][scenario] = []
 
-    # Populating output 
+    # Populating output
     for sampling_name in sampling_names:
+
+        if skip_irt and sampling_name == 'anchor-irt':
+            continue
+
         for number_item in number_items:
             if 'adaptive' in sampling_name:
+                raise NotImplementedError
                 # Getting sample for specific model j
                 item_weights, seen_items, unseen_items = item_weights_dic[sampling_name][number_item][j], seen_items_dic[sampling_name][number_item][j], unseen_items_dic[sampling_name][number_item][j]
 
                 # Estimate ability parameters for the test set (IRT)
                 new_theta = estimate_ability_parameters(responses_test[j], seen_items, A, B)
 
-                # Update accuracies 
+                # Update accuracies
                 for scenario in chosen_scenarios:
                     naive = (item_weights[scenario]*scores_test[j][[s for s in seen_items if s in scenarios_position[scenario]]]).sum()
                     data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()
@@ -79,21 +105,23 @@ def calculate_accuracies(j, sampling_names, item_weights_dic, seen_items_dic, un
                         item_weights, seen_items, unseen_items = item_weights_dic[sampling_name][number_item][it], seen_items_dic[sampling_name][number_item][it], unseen_items_dic[sampling_name][number_item][it]
                     except:
                         breakpoint()
-                    # Estimate ability parameters for the test set (IRT)
-                    new_theta = estimate_ability_parameters(responses_test[j], seen_items, A, B)
+                    if not skip_irt:
+                        # Estimate ability parameters for the test set (IRT)
+                        new_theta = estimate_ability_parameters(responses_test[j], seen_items, A, B)
 
-                    # Update accuracies 
+                    # Update accuracies
                     for scenario in chosen_scenarios:
                         naive = (item_weights[scenario]*scores_test[j][[s for s in seen_items if s in scenarios_position[scenario]]]).sum()
-                        data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()
-                        pirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=None)
-                        cirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=0.5)
-                        lambd = opt_lambds[sampling_name+'_gpirt'][scenario][number_item]
-
                         accs[rows_to_hide[j]][number_item][sampling_name+'_naive'][scenario].append(naive)
-                        accs[rows_to_hide[j]][number_item][sampling_name+'_pirt'][scenario].append(pirt)
-                        accs[rows_to_hide[j]][number_item][sampling_name+'_cirt'][scenario].append(cirt)
-                        accs[rows_to_hide[j]][number_item][sampling_name+'_gpirt'][scenario].append(lambd*naive + (1-lambd)*pirt)
-    
+                        if not skip_irt:
+                            data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()
+                            pirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=None)
+                            cirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=0.5)
+                            lambd = opt_lambds[sampling_name+'_gpirt'][scenario][number_item]
+
+                            accs[rows_to_hide[j]][number_item][sampling_name+'_pirt'][scenario].append(pirt)
+                            accs[rows_to_hide[j]][number_item][sampling_name+'_cirt'][scenario].append(cirt)
+                            accs[rows_to_hide[j]][number_item][sampling_name+'_gpirt'][scenario].append(lambd*naive + (1-lambd)*pirt)
+
     # Return output
     return accs

@@ -296,10 +296,25 @@ def get_anchor_points_weights(scores_train, scenarios_position, scenario, number
 
     return anchor_points, anchor_weights
 
-def sample_items(number_item, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position,
-                 responses_test, scores_train, scenarios_position, A, B, balance_weights
-                 ):
+def sample_items(
+    number_item,
+    iterations,
+    sampling_name,
+    chosen_scenarios,
+    scenarios,
+    subscenarios_position,
+    responses_test,
+    scores_train,
+    scenarios_position,
+    A,
+    B,
+    balance_weights,
+    skip_irt=False
+):
     assert 'adaptive' not in sampling_name
+
+    if skip_irt and sampling_name == 'anchor-irt':
+        raise NotImplementedError
 
     item_weights_dic, seen_items_dic, unseen_items_dic = {}, {}, {}
     start_time = time.time()
