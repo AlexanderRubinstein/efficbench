@@ -19,9 +19,11 @@
                 "5",
                 "--device",
                 "cuda",
-                // "--skip_irt",
+                "--skip_irt",
                 "--cache_path",
-                "cache/mmlu_fields_iid_5_cuda.pickle"
+                "cache/mmlu_fields_iid_5_cuda.pickle",
+                "--num_workers",
+                "4"
             ],
             "console": "integratedTerminal",
         },

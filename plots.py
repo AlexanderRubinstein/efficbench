@@ -21,7 +21,8 @@ rename_mappings = {
     'anchor_gpirt': 'correct.++',
     'anchor-irt_gpirt': 'IRT++',
     'anchor': 'correct.',
-    'anchor-irt':'IRT'
+    'anchor-irt':'IRT',
+    "mean_train_score": "mean train score" # [ADD][new estimator]
 }
 
 color_mappings = {
@@ -33,6 +34,7 @@ color_mappings = {
     'anchor-irt_gpirt': '#ff7f0e',
     'anchor': '#1f77b4',
     'anchor-irt': '#2ca02c',
+    "mean_train_score": "#000000", # [ADD][new estimator]
     #
     # 'random_pirt': '#1f77b4',
     # 'anchor_pirt': '#1f77b4',

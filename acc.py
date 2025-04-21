@@ -1,6 +1,14 @@
 from irt import *
 from utils import *
 
+ESTIMATORS = [
+    'naive',
+    'pirt',
+    'cirt',
+    'gpirt',
+    "mean_train_score" # [ADD][new estimator]
+]
+
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
 
     """
@@ -33,6 +41,13 @@ def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen
 
     return lambd * data_part + (1 - lambd) * irt_part
 
+
+def make_method_name(sampling_name, est):
+    if est == "mean_train_score":
+        return est
+    else:
+        return sampling_name + "_" + est
+
 def calculate_accuracies(
     j,
     sampling_names,
@@ -42,6 +57,7 @@ def calculate_accuracies(
     A,
     B,
     scores_test,
+    scores_train,
     responses_test,
     scenarios_position,
     chosen_scenarios,
@@ -55,19 +71,22 @@ def calculate_accuracies(
     key_from_item_weights_dic = list(item_weights_dic.keys())[0]
     number_items = list(item_weights_dic[key_from_item_weights_dic].keys())
 
+    # shape of scores_train is (n_models, n_qestions)
+    mean_train_score = scores_train.mean()
+
     # Creating output format
     accs = {rows_to_hide[j]: {}}
     for number_item in number_items:
         accs[rows_to_hide[j]][number_item] = {}
-        for est in ['naive', 'pirt', 'cirt', 'gpirt']:
+        for est in ESTIMATORS:
             if skip_irt and est in ['pirt', 'cirt', 'gpirt']:
                 continue
             for sampling_name in sampling_names:
                 if skip_irt and sampling_name == 'anchor-irt':
                     continue
-                accs[rows_to_hide[j]][number_item][sampling_name+'_'+est] = {}
+                accs[rows_to_hide[j]][number_item][make_method_name(sampling_name, est)] = {}
                 for scenario in chosen_scenarios:
-                    accs[rows_to_hide[j]][number_item][sampling_name+'_'+est][scenario] = []
+                    accs[rows_to_hide[j]][number_item][make_method_name(sampling_name, est)][scenario] = []
 
     # Populating output
     for sampling_name in sampling_names:
@@ -113,6 +132,11 @@ def calculate_accuracies(
                     for scenario in chosen_scenarios:
                         naive = (item_weights[scenario]*scores_test[j][[s for s in seen_items if s in scenarios_position[scenario]]]).sum()
                         accs[rows_to_hide[j]][number_item][sampling_name+'_naive'][scenario].append(naive)
+
+                        # [ADD][new estimator]
+                        if len(accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario]) < iterations:
+                            accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario].append(mean_train_score) # does not depend on sampling type
+
                         if not skip_irt:
                             data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()
                             pirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=None)

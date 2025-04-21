@@ -290,9 +290,29 @@ def evaluate_scenarios(
         start_time = time.time()
 
         pool = mp.Pool(cpu)
-        out += pool.starmap(calculate_accuracies, [(j, sampling_names, item_weights_dic, seen_items_dic, unseen_items_dic,
-                                                    A, B, scores_test, responses_test, scenarios_position, chosen_scenarios,
-                                                    balance_weights, opt_lambds, rows_to_hide, skip_irt) for j in tqdm(range(len(rows_to_hide)))])
+        out += pool.starmap(
+            calculate_accuracies,
+            [
+                (
+                    j,
+                    sampling_names,
+                    item_weights_dic,
+                    seen_items_dic,
+                    unseen_items_dic,
+                    A,
+                    B,
+                    scores_test,
+                    scores_train,
+                    responses_test,
+                    scenarios_position,
+                    chosen_scenarios,
+                    balance_weights,
+                    opt_lambds,
+                    rows_to_hide,
+                    skip_irt
+                ) for j in tqdm(range(len(rows_to_hide)))
+            ]
+        )
         pool.close()
         pool.join()
         elapsed_time = np.round(time.time()-start_time)
@@ -314,11 +334,19 @@ def evaluate_scenarios(
                 for sampling_name in sampling_names:
                     if skip_irt and sampling_name == 'anchor-irt':
                         continue
-                    for estimators in ['naive', 'pirt', 'cirt', 'gpirt']:
+                    # for estimators in ['naive', 'pirt', 'cirt', 'gpirt']:
+                    for estimators in ESTIMATORS:
                         if skip_irt and estimators in ['pirt', 'cirt', 'gpirt']:
                             continue
-                        results[rows_to_hide[j]][number_item][sampling_name+'_'+estimators] = {}
+                        method_name = make_method_name(sampling_name, estimators)
+                        results[rows_to_hide[j]][number_item][method_name] = {}
                         for scenario in chosen_scenarios:
-                            results[rows_to_hide[j]][number_item][sampling_name+'_'+estimators][scenario] = np.abs(np.array(accs_hat[rows_to_hide[j]][number_item][sampling_name+'_'+estimators][scenario]) - accs_true[rows_to_hide[j]][scenario])
+                            acc_hat = accs_hat[rows_to_hide[j]][number_item][
+                                method_name
+                            ][scenario]
+                            acc_true = accs_true[rows_to_hide[j]][scenario]
+                            results[rows_to_hide[j]][number_item][method_name][
+                                scenario
+                            ] = np.abs(np.array(acc_hat) - acc_true)
 
     return results, accs_hat, sampling_time_dic # Return the updated results dictionary
