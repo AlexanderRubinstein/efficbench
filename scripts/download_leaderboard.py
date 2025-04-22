@@ -100,8 +100,13 @@ MMLU_SUBSCENARIOS = ['harness_hendrycksTest_abstract_algebra_5', 'harness_hendry
                      'harness_hendrycksTest_world_religions_5']
 
 
-LB_SAVEPATH = 'data/leaderboard_fields_raw_20240125.pickle'
+LB_SAVEPATH = 'data/leaderboard_fields_raw_220402025.pickle'
 
+EXTRA_KEYS = [
+    # 'full_prompt',
+    "example",
+    'predictions'
+]
 
 
 def main():
@@ -136,22 +141,34 @@ def main():
                 aux = load_dataset(model, s, cache_dir=CACHE_DIR)
                 data[model][s]['dates'] = list(aux.keys())
                 data[model][s]['correctness'] = [a[metric] for a in aux['latest']['metrics']]
+                for extra_key in EXTRA_KEYS:
+                    data[model][s][extra_key] = aux['latest'][extra_key]
                 print("\nOK {:} {:}\n".format(model,s))
                 log.append("\nOK {:} {:}\n".format(model,s))
+            except FileNotFoundError as e:
+                print(f"FileNotFoundError loading dataset for {model} and {s}: {e}")
+                # data[model][s] = None
+                # skipped_aux+=1
+                # log.append("\nSKIP {:} {:}\n".format(model,s))
+                skipped_aux = skip_model(data, model, s, skipped_aux, log)
             except Exception as e:
                 print(f"Error loading dataset for {model} and {s}: {e}")
                 try:
                     aux = load_dataset(model, s, cache_dir=CACHE_DIR)
                     data[model][s]['dates'] = list(aux.keys())
                     data[model][s]['correctness'] = aux['latest'][metric]
+                    for extra_key in EXTRA_KEYS:
+                        data[model][s][extra_key] = aux['latest'][extra_key]
                     print("\nOK {:} {:}\n".format(model,s))
                     log.append("\nOK {:} {:}\n".format(model,s))
                 except Exception as e:
                     print(f"Error loading dataset for {model} and {s}: {e}")
-                    data[model][s] = None
-                    print("\nSKIP {:} {:}\n".format(model,s))
-                    skipped_aux+=1
-                    log.append("\nSKIP {:} {:}\n".format(model,s))
+                    # data[model][s] = None
+                    # print("\nSKIP {:} {:}\n".format(model,s))
+                    # skipped_aux+=1
+                    # log.append("\nSKIP {:} {:}\n".format(model,s))
+                    skipped_aux = skip_model(data, model, s, skipped_aux, log)
+
 
         if skipped_aux>0: skipped+=1
 
@@ -159,6 +176,14 @@ def main():
             pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("\nModels skipped so far: {:}\n".format(skipped))
+
+
+def skip_model(data, model, scenario_name, skipped_aux, log):
+    data[model][scenario_name] = None
+    print("\nSKIP {:} {:}\n".format(model, scenario_name))
+    skipped_aux+=1
+    log.append("\nSKIP {:} {:}\n".format(model, scenario_name))
+    return skipped_aux
 
 
 if __name__ == "__main__":
