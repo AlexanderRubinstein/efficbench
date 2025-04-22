@@ -2,3 +2,4 @@
 py-irt
 jsonlines
 matplotlib
+datasets # for downloading data

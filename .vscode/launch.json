@@ -33,6 +33,13 @@
             "request": "launch",
             "program": "scripts/generate_table_avg.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Download Leaderboard",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/download_leaderboard.py",
+            "console": "integratedTerminal"
         }
     ]
 }

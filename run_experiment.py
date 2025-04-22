@@ -196,7 +196,6 @@ if __name__ == "__main__":
 
     chosen_scenarios = list(scenarios.keys())
 
-
     if args.cache_path is not None:
         if os.path.exists(args.cache_path):
             cache = load_pickle(args.cache_path)
