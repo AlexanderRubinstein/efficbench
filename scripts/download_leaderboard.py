@@ -100,7 +100,7 @@ MMLU_SUBSCENARIOS = ['harness_hendrycksTest_abstract_algebra_5', 'harness_hendry
                      'harness_hendrycksTest_world_religions_5']
 
 
-LB_SAVEPATH = 'data/leaderboard_fields_raw_220402025.pickle'
+LB_SAVEPATH = 'data/leaderboard_fields_raw_22042025.pickle'
 
 EXTRA_KEYS = [
     # 'full_prompt',
@@ -119,18 +119,20 @@ def main():
         models.append('open-llm-leaderboard/details_{:}__{:}'.format(creator, model))
 
     data = {}
-    for model in tqdm(models):
-        data[model] = {}
-        for s in SCENARIOS + MMLU_SUBSCENARIOS:
-            data[model][s] = {}
-            data[model][s]['correctness'] = None
-            data[model][s]['dates'] = None
+    # for model in tqdm(models):
+    #     data[model] = {}
+    #     for s in SCENARIOS + MMLU_SUBSCENARIOS:
+    #         data[model][s] = {}
+    #         data[model][s]['correctness'] = None
+    #         data[model][s]['dates'] = None
 
     os.makedirs(CACHE_DIR, exist_ok=True)
     skipped = 0
     log = []
     for model in tqdm(models):
+
         skipped_aux=0
+
         for s in MMLU_SUBSCENARIOS:
             if 'arc' in s: metric = 'acc_norm'
             elif 'hellaswag' in s: metric = 'acc_norm'
@@ -139,35 +141,62 @@ def main():
 
             try:
                 aux = load_dataset(model, s, cache_dir=CACHE_DIR)
+                if model not in data:
+                    data[model] = {} # TODO(Alex 24.04.2025): check that it works as intended
+                if s not in data[model]:
+                    data[model][s] = {}
                 data[model][s]['dates'] = list(aux.keys())
-                data[model][s]['correctness'] = [a[metric] for a in aux['latest']['metrics']]
                 for extra_key in EXTRA_KEYS:
                     data[model][s][extra_key] = aux['latest'][extra_key]
-                print("\nOK {:} {:}\n".format(model,s))
-                log.append("\nOK {:} {:}\n".format(model,s))
+                try:
+                    # data[model][s]['dates'] = list(aux.keys())
+                    data[model][s]['correctness'] = [a[metric] for a in aux['latest']['metrics']]
+                    # for extra_key in EXTRA_KEYS:
+                    #     data[model][s][extra_key] = aux['latest'][extra_key]
+                    print("\nOK {:} {:}\n".format(model,s))
+                    log.append("\nOK {:} {:}\n".format(model,s))
+                except Exception as e:
+                    print(f"Error accessing dataset attribute: {e}")
+                    try:
+                        # aux = load_dataset(model, s, cache_dir=CACHE_DIR)
+                        # data[model][s]['dates'] = list(aux.keys())
+                        data[model][s]['correctness'] = aux['latest'][metric]
+                        # for extra_key in EXTRA_KEYS:
+                        #     data[model][s][extra_key] = aux['latest'][extra_key]
+                        print("\nOK {:} {:}\n".format(model,s))
+                        log.append("\nOK {:} {:}\n".format(model,s))
+                    except Exception as e:
+                        print(f"Error loading dataset for {model} and {s}: {e}")
+                        # data[model][s] = None
+                        # print("\nSKIP {:} {:}\n".format(model,s))
+                        # skipped_aux+=1
+                        # log.append("\nSKIP {:} {:}\n".format(model,s))
+                        skipped_aux = skip_model(data, model, s, skipped_aux, log)
+
             except FileNotFoundError as e:
                 print(f"FileNotFoundError loading dataset for {model} and {s}: {e}")
                 # data[model][s] = None
                 # skipped_aux+=1
                 # log.append("\nSKIP {:} {:}\n".format(model,s))
                 skipped_aux = skip_model(data, model, s, skipped_aux, log)
-            except Exception as e:
-                print(f"Error loading dataset for {model} and {s}: {e}")
-                try:
-                    aux = load_dataset(model, s, cache_dir=CACHE_DIR)
-                    data[model][s]['dates'] = list(aux.keys())
-                    data[model][s]['correctness'] = aux['latest'][metric]
-                    for extra_key in EXTRA_KEYS:
-                        data[model][s][extra_key] = aux['latest'][extra_key]
-                    print("\nOK {:} {:}\n".format(model,s))
-                    log.append("\nOK {:} {:}\n".format(model,s))
-                except Exception as e:
-                    print(f"Error loading dataset for {model} and {s}: {e}")
-                    # data[model][s] = None
-                    # print("\nSKIP {:} {:}\n".format(model,s))
-                    # skipped_aux+=1
-                    # log.append("\nSKIP {:} {:}\n".format(model,s))
-                    skipped_aux = skip_model(data, model, s, skipped_aux, log)
+                break
+            # except Exception as e:
+                # print(f"Error loading dataset for {model} and {s}: {e}")
+                # try:
+                #     aux = load_dataset(model, s, cache_dir=CACHE_DIR)
+                #     data[model][s]['dates'] = list(aux.keys())
+                #     data[model][s]['correctness'] = aux['latest'][metric]
+                #     for extra_key in EXTRA_KEYS:
+                #         data[model][s][extra_key] = aux['latest'][extra_key]
+                #     print("\nOK {:} {:}\n".format(model,s))
+                #     log.append("\nOK {:} {:}\n".format(model,s))
+                # except Exception as e:
+                #     print(f"Error loading dataset for {model} and {s}: {e}")
+                #     # data[model][s] = None
+                #     # print("\nSKIP {:} {:}\n".format(model,s))
+                #     # skipped_aux+=1
+                #     # log.append("\nSKIP {:} {:}\n".format(model,s))
+                #     skipped_aux = skip_model(data, model, s, skipped_aux, log)
 
 
         if skipped_aux>0: skipped+=1
