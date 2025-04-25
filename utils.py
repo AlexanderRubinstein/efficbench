@@ -115,6 +115,25 @@ def prepare_data(chosen_scenarios, scenarios, data):
             scenarios_position[scenario] += subscenarios_position[scenario][key]
     return scenarios_position, subscenarios_position
 
+def hstack_by_attribute_key(chosen_scenarios, scenarios, data, attribute_key):
+    predictions = [
+        np.vstack(
+            [data['data'][sub][attribute_key]
+                for sub
+                    in scenarios[scenario]]
+        ).T
+            for scenario
+                in chosen_scenarios
+    ]
+    predictions = np.hstack(predictions)
+    return predictions
+
+
+def create_predictions(chosen_scenarios, scenarios, data):
+    predictions = hstack_by_attribute_key(chosen_scenarios, scenarios, data, 'predictions')
+    return predictions
+
+
 def create_responses(chosen_scenarios, scenarios, data):
 
     """
@@ -129,8 +148,9 @@ def create_responses(chosen_scenarios, scenarios, data):
     - A numpy array of responses for the chosen scenarios.
     """
 
-    responses = [np.vstack([data['data'][sub]['correctness'] for sub in scenarios[scenario]]).T for scenario in chosen_scenarios]
-    responses = np.hstack(responses)
+    # responses = [np.vstack([data['data'][sub]['correctness'] for sub in scenarios[scenario]]).T for scenario in chosen_scenarios]
+    # responses = np.hstack(responses)
+    responses = hstack_by_attribute_key(chosen_scenarios, scenarios, data, 'correctness')
     return responses
 
 def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
@@ -148,9 +168,16 @@ def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
     - scores_test: The testing set, including only rows specified by rows_to_hide.
     - balance_weights: Array of weights used to balance the training data.
     """
+
+    def split_array_in_train_test(array, rows_to_hide):
+        train_array = array[[i for i in range(array.shape[0]) if i not in rows_to_hide]]
+        test_array = array[rows_to_hide]
+        return train_array, test_array
+
     # Prepare data and scenarios
     scenarios_position, subscenarios_position = prepare_data(chosen_scenarios, scenarios, data)
     scores = create_responses(chosen_scenarios, scenarios, data)
+    predictions = create_predictions(chosen_scenarios, scenarios, data)
     # Balance weights
     balance_weights = np.ones(scores.shape[1])
     for scenario in chosen_scenarios:
@@ -160,10 +187,20 @@ def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
             n_i = len(subscenarios_position[scenario][sub])
             balance_weights[subscenarios_position[scenario][sub]] = N/(n_sub*n_i)
     # Create training and test sets by hiding specific rows
-    scores_train = scores[[i for i in range(scores.shape[0]) if i not in rows_to_hide]]
-    scores_test = scores[rows_to_hide]
+    # scores_train = scores[[i for i in range(scores.shape[0]) if i not in rows_to_hide]]
+    # scores_test = scores[rows_to_hide]
+    scores_train, scores_test = split_array_in_train_test(scores, rows_to_hide)
 
-    return scores_train, scores_test, balance_weights, scenarios_position, subscenarios_position
+    predictions_train, predictions_test = split_array_in_train_test(predictions, rows_to_hide)
+
+    return (
+        scores_train,
+        predictions_train,
+        scores_test,
+        balance_weights,
+        scenarios_position,
+        subscenarios_position
+    )
 
 helm_lite_scenarios = {'commonsense:dataset=openbookqa,method=multiple_choice_joint,':['commonsense:dataset=openbookqa,method=multiple_choice_joint,'],
                        'gsm:':['gsm:'],

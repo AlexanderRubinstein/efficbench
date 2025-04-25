@@ -20,8 +20,8 @@
                 "--device",
                 "cuda",
                 "--skip_irt",
-                "--cache_path",
-                "cache/mmlu_fields_iid_5_cuda.pickle",
+                // "--cache_path",
+                // "cache/mmlu_fields_iid_5_cuda.pickle",
                 "--num_workers",
                 "4"
             ],
@@ -39,6 +39,14 @@
             "type": "debugpy",
             "request": "launch",
             "program": "scripts/download_leaderboard.py",
+            "args": [
+                "--lb_type",
+                // "mmlu_fields",
+                "openllm_leaderboard",
+                "--lb_savepath",
+                // "data/leaderboard_fields_raw_22042025.pickle"
+                "./data/leaderboard_raw_25042025.pickle"
+            ],
             "console": "integratedTerminal"
         }
     ]

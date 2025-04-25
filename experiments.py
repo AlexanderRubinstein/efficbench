@@ -67,7 +67,7 @@ def evaluate_scenarios(
         print(f"\nEvaluating models {rows_to_hide}")
 
         # Prepare data and scenarios
-        scores_train, scores_test, balance_weights, scenarios_position, subscenarios_position = prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide)
+        scores_train, predictions_train, scores_test, balance_weights, scenarios_position, subscenarios_position = prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide)
 
         responses_train = np.zeros(scores_train.shape)
         responses_test = np.zeros(scores_test.shape)
@@ -244,6 +244,7 @@ def evaluate_scenarios(
                             subscenarios_position,
                             responses_test,
                             scores_train,
+                            predictions_train,
                             scenarios_position,
                             A,
                             B,

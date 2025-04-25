@@ -4,7 +4,7 @@ from tqdm import tqdm
 import numpy as np
 import pickle
 import os
-
+import argparse
 
 CACHE_DIR = "./cache_dir"
 
@@ -111,10 +111,25 @@ EXTRA_KEYS = [
 
 def main():
 
-    lb_savepath = LB_SAVEPATH
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lb_type", type=str, default="mmlu_fields")
+    parser.add_argument("--lb_savepath", type=str, default=LB_SAVEPATH)
+    args = parser.parse_args()
+
+    lb_savepath = args.lb_savepath
+
+    if args.lb_type == "mmlu_fields":
+        model_names = MODELS_NAMES
+    else:
+        df = pd.read_csv('./generating_data/download-openllmleaderboard/open-llm-leaderboard.csv')
+        df = df.loc[df.MMLU>30]
+        model_names = list(df.Model)
+        print(len(model_names)) # 2288
+        model_names = [model_names[i] for i in range(0,len(model_names), 5)]
+        print(len(model_names)) # 458
 
     models = []
-    for m in MODELS_NAMES:
+    for m in model_names:
         creator, model = tuple(m.split("/"))
         models.append('open-llm-leaderboard/details_{:}__{:}'.format(creator, model))
 
@@ -197,7 +212,6 @@ def main():
                 #     # skipped_aux+=1
                 #     # log.append("\nSKIP {:} {:}\n".format(model,s))
                 #     skipped_aux = skip_model(data, model, s, skipped_aux, log)
-
 
         if skipped_aux>0: skipped+=1
 
