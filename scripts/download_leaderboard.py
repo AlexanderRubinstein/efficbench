@@ -188,8 +188,8 @@ def main():
                         # log.append("\nSKIP {:} {:}\n".format(model,s))
                         skipped_aux = skip_model(data, model, s, skipped_aux, log)
 
-            except FileNotFoundError as e:
-                print(f"FileNotFoundError loading dataset for {model} and {s}: {e}")
+            except Exception as e:
+                print(f"Error loading dataset for {model} and {s}: {e}")
                 # data[model][s] = None
                 # skipped_aux+=1
                 # log.append("\nSKIP {:} {:}\n".format(model,s))
