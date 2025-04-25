@@ -155,11 +155,11 @@ def main():
             else: metric = 'acc'
 
             try:
-                aux = load_dataset(model, s, cache_dir=CACHE_DIR)
                 if model not in data:
                     data[model] = {} # TODO(Alex 24.04.2025): check that it works as intended
                 if s not in data[model]:
                     data[model][s] = {}
+                aux = load_dataset(model, s, cache_dir=CACHE_DIR)
                 data[model][s]['dates'] = list(aux.keys())
                 for extra_key in EXTRA_KEYS:
                     data[model][s][extra_key] = aux['latest'][extra_key]
