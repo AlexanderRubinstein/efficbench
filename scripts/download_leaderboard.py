@@ -148,7 +148,7 @@ def main():
 
         skipped_aux=0
 
-        for s in MMLU_SUBSCENARIOS:
+        for s in SCENARIOS + MMLU_SUBSCENARIOS:
             if 'arc' in s: metric = 'acc_norm'
             elif 'hellaswag' in s: metric = 'acc_norm'
             elif 'truthfulqa' in s: metric = 'mc2'
