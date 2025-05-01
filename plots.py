@@ -22,6 +22,7 @@ rename_mappings = {
     'anchor-irt_gpirt': 'IRT++',
     'anchor': 'correct.',
     'anchor-irt':'IRT',
+    "high-disagreement_naive": "PDS",
     "mean_train_score": "mean train score" # [ADD][new estimator]
 }
 
@@ -34,6 +35,7 @@ color_mappings = {
     'anchor-irt_gpirt': '#ff7f0e',
     'anchor': '#1f77b4',
     'anchor-irt': '#2ca02c',
+    "high-disagreement_naive": "#9467bd",
     "mean_train_score": "#000000", # [ADD][new estimator]
     #
     # 'random_pirt': '#1f77b4',
@@ -117,8 +119,24 @@ def load_scores(bench, split):
     elif bench=='icl_templates':scenarios = icl_templates_scenarios
     else: raise NotImplementedError
 
-    scenarios_position, subscenarios_position = prepare_data(scenarios, scenarios, data2)
-    scores = create_responses(scenarios, scenarios, data2)
+    filtered_scenarios = {}
+    scenarios_to_pop = []
+    for scenario in scenarios:
+        filtered_scenarios[scenario] = []
+        for sub in scenarios[scenario]:
+            if sub not in data2['data']:
+                print(f"Sub-scenario {sub} of scenario {scenario} not found in data2, so skipping it")
+                continue
+            filtered_scenarios[scenario].append(sub)
+        if len(filtered_scenarios[scenario]) == 0:
+            scenarios_to_pop.append(scenario)
+    for scenario in scenarios_to_pop:
+        del filtered_scenarios[scenario]
+    scenarios = filtered_scenarios
+    chosen_scenarios = list(filtered_scenarios.keys())
+
+    scenarios_position, subscenarios_position = prepare_data(chosen_scenarios, scenarios, data2)
+    scores = create_responses(chosen_scenarios, scenarios, data2)
 
     # Balance weights
     balance_weights = np.ones(scores.shape[1])

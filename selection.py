@@ -6,8 +6,20 @@ from scipy.integrate import nquad, quad
 from scipy.stats import norm
 from tqdm import tqdm
 import time
-from irt import *
-from utils import *
+import torch
+import torch.nn.functional as F
+# from irt import *
+from irt import estimate_ability_parameters
+# from utils import *
+from utils import (
+    item_curve,
+    # prepare_data,
+    # prepare_and_split_data,
+    # create_predictions,
+    # create_responses,
+)
+# from irt import get_irt_params, get_irt_weights
+# from utils import prepare_data, prepare_and_split_data, create_predictions, create_responses
 from copy import copy
 
 def get_random(scenarios_choosen, scenarios, number_item, subscenarios_position, responses_test, balance_weights, random_seed):
@@ -52,6 +64,7 @@ def get_random(scenarios_choosen, scenarios, number_item, subscenarios_position,
         seen_items_scenario = []
 
         # Allocate the number of items to be seen in each subscenario.
+        # (uniformly spread num items to sample across subscenarios)
         number_items_sub = np.zeros(len(scenarios[scenario])).astype(int)
         number_items_sub += number_item // len(scenarios[scenario])
         number_items_sub[:(number_item - number_items_sub.sum())] += 1
@@ -69,6 +82,98 @@ def get_random(scenarios_choosen, scenarios, number_item, subscenarios_position,
 
     # Determine the unseen items by finding all item indices that are not in the seen items list.
     unseen_items = [i for i in range(responses_test.shape[1]) if i not in seen_items]
+
+    return item_weights, seen_items, unseen_items
+
+
+def stratified_num_items(number_item, scenarios):
+    number_items_sub = np.zeros(len(scenarios)).astype(int)
+    number_items_sub += number_item // len(scenarios)
+    number_items_sub[:(number_item - number_items_sub.sum())] += 1
+    return number_items_sub
+
+
+def get_high_disagreement(
+    scenarios_choosen,
+    scenarios,
+    number_item,
+    subscenarios_position,
+    num_samples_in_test,
+    predictions_train,
+    balance_weights,
+    random_seed,
+):
+
+    """
+    Select items with high disagreement between models.
+    """
+
+    def pds(logits):
+
+        def are_probs(logits):
+            if (
+                    logits.min() >= 0
+                and
+                    logits.max() <= 1
+            ):
+                return True
+            return False
+
+        def get_probs(logits):
+            if are_probs(logits):
+                probs = logits
+            else:
+                probs = F.softmax(logits, dim=-1)
+            return probs
+
+        # input shape: (num_models, num_samples, num_classes)
+        # output shape: (num_samples)
+
+        probs = get_probs(logits).clone()
+
+        max_by_model = probs.max(0).values
+        sum_over_classes = max_by_model.sum(-1)
+
+        return torch.Tensor(sum_over_classes)
+
+    def get_disagreement_scores(predictions_train, num_samples_in_test):
+        pds_per_sample = pds(torch.Tensor(predictions_train))
+        return pds_per_sample.numpy()
+
+    seen_items = []  # Initialize an empty list to hold the indices of seen items.
+    item_weights = {}
+
+    disagreement_scores = get_disagreement_scores(
+        predictions_train,
+        num_samples_in_test
+    )
+
+    # Iterate through each chosen scenario to determine the seen items.
+    for scenario in scenarios_choosen:
+
+        seen_items_scenario = []
+
+        number_items_sub = stratified_num_items(number_item, scenarios[scenario])
+
+        # Note: scenario - e.g. mmlu
+        # subscenario - e.g. harness_hendrycksTest_sociology_5
+        # subscenarios_position - samples' indices that correspond to each subscenario
+
+        i = 0
+        for sub in scenarios[scenario]:
+            sorted_by_disagreement = sorted(
+                subscenarios_position[scenario][sub],
+                key=lambda x: disagreement_scores[x],
+                reverse=True
+            )
+            seen_items_scenario += sorted_by_disagreement[:number_items_sub[i]]
+            i += 1
+
+        item_weights[scenario] = np.ones(number_item)/number_item
+
+        seen_items += seen_items_scenario
+
+    unseen_items = [i for i in range(num_samples_in_test) if i not in seen_items]
 
     return item_weights, seen_items, unseen_items
 
@@ -321,7 +426,18 @@ def sample_items(
     start_time = time.time()
 
     for it in range(iterations):
-        if sampling_name == 'random':
+        if sampling_name == 'high-disagreement':
+            item_weights, seen_items, unseen_items = get_high_disagreement(
+                chosen_scenarios,
+                scenarios,
+                number_item,
+                subscenarios_position,
+                num_samples_in_test=responses_test.shape[1],
+                predictions_train=predictions_train,
+                balance_weights=balance_weights,
+                random_seed=it,
+            )
+        elif sampling_name == 'random':
             item_weights, seen_items, unseen_items = get_random(chosen_scenarios, scenarios, number_item, subscenarios_position, responses_test, balance_weights, random_seed=it)
 
         elif sampling_name == 'anchor':

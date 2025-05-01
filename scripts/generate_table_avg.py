@@ -3,7 +3,7 @@ import os
 import pickle
 import numpy as np
 from scipy import stats
-
+import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from plots import (
     winrate,
@@ -19,6 +19,11 @@ sys.path.pop(0)
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path_suffix_mmlu_fields', type=str, help='path suffix', default='')
+    args = parser.parse_args()
+    path_suffix_mmlu_fields = args.path_suffix_mmlu_fields
+
     agg = 'leaderboard' # 'leaderboard', 'scenarios'
     results = 'acc'# 'acc', 'rank'
 
@@ -41,7 +46,12 @@ def main():
             table_std[bench][split] = {}
             # model_perf[bench][split] = {}
 
-            full_results_path = f'results/accs_{bench}_split-{split}_iterations-5.pickle'
+            if bench == 'mmlu_fields' and split == 'iid':
+                path_suffix = path_suffix_mmlu_fields
+            else:
+                path_suffix = ''
+
+            full_results_path = f'results/accs_{bench}_split-{split}_iterations-5{path_suffix}.pickle'
 
             with open(full_results_path, 'rb') as handle:
                 data = pickle.load(handle)

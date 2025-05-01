@@ -49,7 +49,7 @@ def evaluate_scenarios(
     """
 
     assert bench in ['irt_helm_lite', 'irt_lb', 'irt_lb_perf', 'irt_mmlu', 'irt_alpaca', 'irt_mmlu_fields', 'irt_icl_templates']
-    assert np.mean([s in ['random', 'anchor', 'anchor-irt', 'adaptive'] for s in sampling_names]) == 1
+    assert any([s in ['random', 'anchor', 'anchor-irt', 'adaptive', 'high-disagreement'] for s in sampling_names]) # [ADD][new sampling]
 
     number_items = [10, 30, 60, 100]  # Number of items to consider in evaluations
 

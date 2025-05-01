@@ -175,6 +175,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', type=int, help='number of workers', default=12)
     parser.add_argument('--skip_irt', action='store_true', help='skip irt')
     parser.add_argument('--cache_path', type=str, help='cache path', default=None)
+    parser.add_argument('--sampling_names', type=str, help='sampling names', default='random,anchor,anchor-irt')
+    parser.add_argument('--path_suffix', type=str, help='path suffix', default='')
 
     args = parser.parse_args()
     bench = args.bench
@@ -188,7 +190,7 @@ if __name__ == "__main__":
 
     # Defining other parameters
     Ds = [2, 5, 10, 15]
-    sampling_names = ['random', 'anchor', 'anchor-irt']# or ['adaptive']
+    sampling_names = args.sampling_names.split(',')
 
     scenario_name = 'full' #we are evaluating all scenarios at once (this is just a nomination)
 
@@ -225,11 +227,14 @@ if __name__ == "__main__":
         cache=cache
     )
 
-    dump_pickle(cache, args.cache_path)
+    if args.cache_path is not None:
+        dump_pickle(cache, args.cache_path)
 
-    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}.pickle'
-    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}.pickle'
-    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}.pickle'
+    path_suffix = args.path_suffix
+
+    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
+    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
+    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
 
     with open(results_full_path, 'wb') as handle:
         pickle.dump(results_full, handle, protocol=pickle.HIGHEST_PROTOCOL)

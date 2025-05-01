@@ -23,7 +23,13 @@
                 // "--cache_path",
                 // "cache/mmlu_fields_iid_5_cuda.pickle",
                 "--num_workers",
-                "4"
+                "4",
+                // "--extra_sampling_names",
+                // "high-disagreement",
+                "--sampling_names",
+                "random,high-disagreement",
+                "--path_suffix",
+                "_high-disagreement"
             ],
             "console": "integratedTerminal",
         },
@@ -32,7 +38,11 @@
             "type": "debugpy",
             "request": "launch",
             "program": "scripts/generate_table_avg.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args": [
+                "--path_suffix_mmlu_fields",
+                "_high-disagreement"
+            ],
         },
         {
             "name": "Download Leaderboard",
