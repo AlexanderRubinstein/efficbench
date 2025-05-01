@@ -56,10 +56,13 @@ def parse_df_with_results(
 
                         if isinstance(model_preds, str):
                             parsed_model_preds = parse_list_from_string(model_preds, list_separators=[','])
-                            new_value_to_add.append(pad_predictions(parsed_model_preds))
+                            # new_value_to_add.append(pad_predictions(parsed_model_preds))
 
                         else:
-                            new_value_to_add.append(pad_predictions(model_preds))
+                            # new_value_to_add.append(pad_predictions(model_preds))
+                            parsed_model_preds = model_preds
+
+                        new_value_to_add.append(pad_predictions(parsed_model_preds))
 
                         assert len(new_value_to_add[-1]) == max_num_answers, \
                             f"Num answers not equal to {max_num_answers}: {len(new_value_to_add[-1])} for sub: {sub} and key: {key}"
@@ -75,8 +78,10 @@ def parse_df_with_results(
         for key in keys_to_add:
             if key == 'predictions':
                 data['data'][sub][key] = np.array(data['data'][sub][key]).transpose(1, 0, 2).astype(float)
+                # Note: Shape after transpose: (num_samples, num_models, num_answers)
             else:
                 data['data'][sub][key] = np.array(data['data'][sub][key]).T.astype(float)
+                # Note: Shape after transpose: (num_samples, num_models)
 
     return data, max_answers_dict
 
