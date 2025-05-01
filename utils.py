@@ -116,12 +116,26 @@ def prepare_data(chosen_scenarios, scenarios, data):
     return scenarios_position, subscenarios_position
 
 def hstack_by_attribute_key(chosen_scenarios, scenarios, data, attribute_key):
+    """
+    Stack the data by the specified attribute key.
+
+    Parameters:
+    - chosen_scenarios: List of scenarios to consider.
+    - scenarios: Dictionary mapping scenarios to their subscenarios.
+    - data: The data to be used for creating responses and weights.
+    - attribute_key: The key to stack the data by.
+
+    Returns:
+    - A numpy array of the stacked data.
+    """
+
+    transpose_order = (1, 0, 2) if attribute_key == 'predictions' else (1, 0)
     predictions = [
         np.vstack(
             [data['data'][sub][attribute_key]
                 for sub
                     in scenarios[scenario]]
-        ).T
+        ).transpose(transpose_order)
             for scenario
                 in chosen_scenarios
     ]

@@ -305,6 +305,7 @@ def sample_items(
     subscenarios_position,
     responses_test,
     scores_train,
+    predictions_train,
     scenarios_position,
     A,
     B,
