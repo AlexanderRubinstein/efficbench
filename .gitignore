@@ -9,7 +9,6 @@ plots
 results
 results_non_gen
 models
-results
 results/estimate_ability_parameters_timing.txt
 cache
 cache_dir

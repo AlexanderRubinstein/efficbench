@@ -20,16 +20,16 @@
                 "--device",
                 "cuda",
                 "--skip_irt",
-                // "--cache_path",
-                // "cache/mmlu_fields_iid_5_cuda.pickle",
+                "--cache_path",
+                "cache/mmlu_fields_iid_5_cuda_02052025.pickle",
                 "--num_workers",
                 "4",
-                // "--extra_sampling_names",
-                // "high-disagreement",
                 "--sampling_names",
-                "random,high-disagreement",
+                "random,high-disagreement,low-disagreement",
+                // "random,high-disagreement",
                 "--path_suffix",
-                "_high-disagreement"
+                "_disagreement"
+                // "_reproduced"
             ],
             "console": "integratedTerminal",
         },
@@ -41,7 +41,10 @@
             "console": "integratedTerminal",
             "args": [
                 "--path_suffix_mmlu_fields",
-                "_high-disagreement"
+                "_disagreement",
+                // "",
+                "--scenarios_to_skip",
+                "harness_gsm8k_5"
             ],
         },
         {

@@ -1,12 +1,23 @@
-from irt import *
-from utils import *
+from irt import estimate_ability_parameters
+# from irt import *
+# from utils import *
+from utils import (
+    item_curve,
+    prepare_data,
+    prepare_and_split_data,
+    create_predictions,
+    create_responses
+)
+import torch
+import torch.nn.functional as F
 
 ESTIMATORS = [
     'naive',
     'pirt',
     'cirt',
     'gpirt',
-    "mean_train_score" # [ADD][new estimator]
+    "mean_train_score", # [ADD][new estimator]
+    "KNN" # [ADD][new estimator]
 ]
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
@@ -58,7 +69,10 @@ def calculate_accuracies(
     B,
     scores_test,
     scores_train,
+    train_model_true_accs,
     responses_test,
+    train_models_embeddings,
+    test_models_embeddings,
     scenarios_position,
     chosen_scenarios,
     balance_weights,
@@ -137,6 +151,15 @@ def calculate_accuracies(
                         if len(accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario]) < iterations:
                             accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario].append(mean_train_score) # does not depend on sampling type
 
+                        # [ADD][new estimator] KNN
+                        knn_acc = compute_acc_knn(
+                            test_model_embedding=test_models_embeddings[sampling_name][number_item][it][j],
+                            train_model_embeddings=train_models_embeddings[sampling_name][number_item][it],
+                            scenario=scenario,
+                            train_model_true_accs=train_model_true_accs
+                        )
+                        accs[rows_to_hide[j]][number_item][sampling_name+'_KNN'][scenario].append(knn_acc)
+
                         if not skip_irt:
                             data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()
                             pirt = compute_acc_pirt(data_part_pirt, scenario, scenarios_position, seen_items, unseen_items, A, B, new_theta, balance_weights, thresh=None)
@@ -149,3 +172,44 @@ def calculate_accuracies(
 
     # Return output
     return accs
+
+
+def compute_acc_knn(
+    test_model_embedding,
+    train_model_embeddings,
+    scenario,
+    train_model_true_accs
+):
+    """
+    Compute the accuracy of the KNN estimator.
+    """
+
+    similarities = F.cosine_similarity(
+        test_model_embedding,
+        train_model_embeddings,
+        dim=1
+    )
+
+    # Get index of most similar embedding
+    most_similar_idx = torch.argmax(similarities).item()
+
+    # Return accuracy of most similar example
+    return train_model_true_accs[most_similar_idx][scenario]
+
+
+def compute_true_acc(
+    scores,
+    balance_weights,
+    scenarios_position,
+    chosen_scenarios,
+    model_indices,
+    model_keys_dict
+):
+    accs_true = {}
+    for j in model_indices:
+        accs_true[model_keys_dict[j]] = {}
+        for scenario in chosen_scenarios:
+            accs_true[model_keys_dict[j]][scenario] = (
+                (balance_weights[None, :] * scores)[j, scenarios_position[scenario]]
+            ).mean()
+    return accs_true

@@ -6,7 +6,13 @@ import time
 from irt import *
 from selection import *
 from utils import load_pickle, dump_pickle
-from acc import *
+# from acc import *
+from acc import (
+    ESTIMATORS,
+    make_method_name,
+    calculate_accuracies,
+    compute_true_acc
+)
 
 
 def make_cache_key(scenario_name, split_number, suffix):
@@ -30,7 +36,6 @@ def evaluate_scenarios(
     cache=None
 ):
 
-
     """
     Evaluates scenarios by training and validating IRT models, then computing accuracies and updating results.
 
@@ -49,7 +54,7 @@ def evaluate_scenarios(
     """
 
     assert bench in ['irt_helm_lite', 'irt_lb', 'irt_lb_perf', 'irt_mmlu', 'irt_alpaca', 'irt_mmlu_fields', 'irt_icl_templates']
-    assert any([s in ['random', 'anchor', 'anchor-irt', 'adaptive', 'high-disagreement'] for s in sampling_names]) # [ADD][new sampling]
+    assert any([s in ['random', 'anchor', 'anchor-irt', 'adaptive', 'high-disagreement', 'low-disagreement'] for s in sampling_names]) # [ADD][new sampling]
 
     number_items = [10, 30, 60, 100]  # Number of items to consider in evaluations
 
@@ -59,7 +64,7 @@ def evaluate_scenarios(
     lr = .1  # Learning rate for IRT model training (package default is .1)
 
     # Iterate through each set of rows to hide
-    accs_true = {}  # Initialize a dictionary to hold real accuracies
+    # accs_true = {}  # Initialize a dictionary to hold real accuracies
     out = [] # To store intermediate results
     for split_number, rows_to_hide in enumerate(set_of_rows):
         rows_to_hide_str = ':'.join([str(r) for r in rows_to_hide])[:30] + ':'.join([str(r) for r in rows_to_hide])[-30:]
@@ -67,7 +72,20 @@ def evaluate_scenarios(
         print(f"\nEvaluating models {rows_to_hide}")
 
         # Prepare data and scenarios
-        scores_train, predictions_train, scores_test, balance_weights, scenarios_position, subscenarios_position = prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide)
+        (
+            scores_train,
+            predictions_train,
+            predictions_test,
+            scores_test,
+            balance_weights,
+            scenarios_position,
+            subscenarios_position
+        ) = prepare_and_split_data(
+            chosen_scenarios,
+            scenarios,
+            data,
+            rows_to_hide
+        )
 
         responses_train = np.zeros(scores_train.shape)
         responses_test = np.zeros(scores_test.shape)
@@ -94,11 +112,15 @@ def evaluate_scenarios(
             responses_train[:,ind] = (scores_train[:,ind]>c).astype(int)
             responses_test[:,ind] = (scores_test[:,ind]>c).astype(int)
 
-        # Storing true accs to use later
-        for j in range(len(rows_to_hide)):
-            accs_true[rows_to_hide[j]] = {}
-            for scenario in chosen_scenarios:
-                accs_true[rows_to_hide[j]][scenario] = ((balance_weights[None,:]*scores_test)[j, scenarios_position[scenario]]).mean()
+        # Initialize a dictionary to hold real accuracies
+        accs_true = compute_true_acc(
+            scores_test,
+            balance_weights,
+            scenarios_position,
+            chosen_scenarios,
+            list(range(len(rows_to_hide))),
+            rows_to_hide
+        )
 
         if skip_irt:
             A, B, Theta, opt_lambds = None, None, None, None
@@ -290,11 +312,50 @@ def evaluate_scenarios(
         print("\nv) computing accuracies")
         start_time = time.time()
 
-        pool = mp.Pool(cpu)
-        out += pool.starmap(
-            calculate_accuracies,
-            [
-                (
+        train_model_indices = list(range(scores_train.shape[0]))
+        train_model_true_accs = compute_true_acc(
+            scores_train,
+            balance_weights, # sample -> sample weight
+            scenarios_position, # scenario -> list of sample indices
+            chosen_scenarios,
+            train_model_indices,
+            train_model_indices # they are not the global indices, but the contiguous indices of train models after removing test models
+        )
+
+        if cache is not None:
+            cache_key = make_cache_key(scenario_name, split_number, f'embeddings')
+        else:
+            cache_key = None
+
+        if cache_key is not None and cache_key in cache:
+            train_models_embeddings, test_models_embeddings = cache[cache_key]
+        else:
+            train_models_embeddings = {}
+            test_models_embeddings = {}
+            for sampling_name in sampling_names:
+                train_models_embeddings[sampling_name] = {}
+                test_models_embeddings[sampling_name] = {}
+                for number_item in number_items:
+                    train_models_embeddings[sampling_name][number_item] = {}
+                    test_models_embeddings[sampling_name][number_item] = {}
+                    for it in range(iterations):
+                        train_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                            predictions_train,
+                            seen_items_dic[sampling_name][number_item][it]
+                        )
+                        test_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                            predictions_test,
+                            seen_items_dic[sampling_name][number_item][it]
+                        )
+
+            if cache_key is not None:
+                cache[cache_key] = train_models_embeddings, test_models_embeddings
+                dump_pickle(cache, cache["cache_path"])
+
+
+        for j in tqdm(range(len(rows_to_hide))):
+            out.append(
+                calculate_accuracies(
                     j,
                     sampling_names,
                     item_weights_dic,
@@ -304,18 +365,18 @@ def evaluate_scenarios(
                     B,
                     scores_test,
                     scores_train,
+                    train_model_true_accs,
                     responses_test,
+                    train_models_embeddings,
+                    test_models_embeddings,
                     scenarios_position,
                     chosen_scenarios,
                     balance_weights,
                     opt_lambds,
                     rows_to_hide,
                     skip_irt
-                ) for j in tqdm(range(len(rows_to_hide)))
-            ]
-        )
-        pool.close()
-        pool.join()
+                )
+            )
         elapsed_time = np.round(time.time()-start_time)
         print(f" - finished in {elapsed_time} seconds")
 
@@ -351,3 +412,7 @@ def evaluate_scenarios(
                             ] = np.abs(np.array(acc_hat) - acc_true)
 
     return results, accs_hat, sampling_time_dic # Return the updated results dictionary
+
+
+def compute_embedding(predictions, anchor_indices):
+    return torch.Tensor(predictions)[:, anchor_indices, :].softmax(dim=-1).reshape(predictions.shape[0], -1)

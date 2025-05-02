@@ -93,7 +93,7 @@ def stratified_num_items(number_item, scenarios):
     return number_items_sub
 
 
-def get_high_disagreement(
+def sample_by_disagreement(
     scenarios_choosen,
     scenarios,
     number_item,
@@ -102,6 +102,7 @@ def get_high_disagreement(
     predictions_train,
     balance_weights,
     random_seed,
+    high_first=False
 ):
 
     """
@@ -166,7 +167,14 @@ def get_high_disagreement(
                 key=lambda x: disagreement_scores[x],
                 reverse=True
             )
-            seen_items_scenario += sorted_by_disagreement[:number_items_sub[i]]
+            if high_first:
+                top_by_disagreement = sorted_by_disagreement[:number_items_sub[i]]
+            else:
+                if number_items_sub[i] > 0:
+                    top_by_disagreement = sorted_by_disagreement[-number_items_sub[i]:]
+                else:
+                    top_by_disagreement = []
+            seen_items_scenario += top_by_disagreement
             i += 1
 
         item_weights[scenario] = np.ones(number_item)/number_item
@@ -426,8 +434,9 @@ def sample_items(
     start_time = time.time()
 
     for it in range(iterations):
-        if sampling_name == 'high-disagreement':
-            item_weights, seen_items, unseen_items = get_high_disagreement(
+        # if sampling_name == 'high-disagreement':
+        if 'disagreement' in sampling_name:
+            item_weights, seen_items, unseen_items = sample_by_disagreement(
                 chosen_scenarios,
                 scenarios,
                 number_item,
@@ -436,6 +445,7 @@ def sample_items(
                 predictions_train=predictions_train,
                 balance_weights=balance_weights,
                 random_seed=it,
+                high_first=(sampling_name == 'high-disagreement')
             )
         elif sampling_name == 'random':
             item_weights, seen_items, unseen_items = get_random(chosen_scenarios, scenarios, number_item, subscenarios_position, responses_test, balance_weights, random_seed=it)

@@ -210,6 +210,7 @@ def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
     return (
         scores_train,
         predictions_train,
+        predictions_test,
         scores_test,
         balance_weights,
         scenarios_position,

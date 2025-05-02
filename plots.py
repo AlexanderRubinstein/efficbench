@@ -22,7 +22,7 @@ rename_mappings = {
     'anchor-irt_gpirt': 'IRT++',
     'anchor': 'correct.',
     'anchor-irt':'IRT',
-    "high-disagreement_naive": "PDS",
+    # "high-disagreement_naive": "PDS",
     "mean_train_score": "mean train score" # [ADD][new estimator]
 }
 
@@ -35,13 +35,25 @@ color_mappings = {
     'anchor-irt_gpirt': '#ff7f0e',
     'anchor': '#1f77b4',
     'anchor-irt': '#2ca02c',
-    "high-disagreement_naive": "#9467bd",
+    # "high-disagreement_naive": "#9467bd",
     "mean_train_score": "#000000", # [ADD][new estimator]
     #
     # 'random_pirt': '#1f77b4',
     # 'anchor_pirt': '#1f77b4',
     # 'anchor-irt_pirt': '#2ca02c',
 }
+
+EXTRA_COLORS = [
+    '#17becf',
+    '#bcbd22',
+    '#7f7f7f',
+    '#e377c2',
+    '#ffbb78',
+    '#98df8a',
+    '#ff9896',
+    '#c5b0d5',
+    '#c49c94'
+]
 
 benchs = ['lb', 'mmlu', 'helm_lite', 'alpaca','mmlu_fields', 'icl_templates']
 titles = {'lb':'Open LLM Leaderboard','mmlu':'MMLU','helm_lite':'HELM','alpaca':'AlpacaEval', 'icl_templates':'ICL consistency'}
@@ -64,14 +76,23 @@ def plot_perf_lines(table_avg, table_std, title, xlabel, ylabel, ylim,
     markers = ['o', 'v', '*', 'x', 's','p']
     jitters = [-6.3,-3.7,-1.3,1.3,3.7,6.3]
     colors = matplotlib.rcParams['axes.prop_cycle'].by_key()['color'][:9]
-    j=0
+    j = 0
     for method, values in table_avg.items():
         x = np.array(list(values.keys()))
         y = np.array(list(values.values()))
         s = np.array(list(table_std[method].values()))
 
         if error_bar:
-            plt.errorbar(x+jitters[j], y, color =color_mappings[method], yerr=s, label=rename_mappings[method], marker=markers[j], **style)
+            plt.errorbar(
+                (x + jitters[j]),
+                y,
+                color=color_mappings[method],
+                yerr=s,
+                # label=rename_mappings.get(method, method),
+                label=rename_mappings[method],
+                marker=markers[j],
+                **style
+            )
         else:
             plt.plot(x, y, label=method)
 
@@ -94,11 +115,99 @@ def plot_perf_lines(table_avg, table_std, title, xlabel, ylabel, ylim,
     #plt.grid(which='minor', color='gray', linestyle=':')
     #plt.show()
 
+
+def plot_perf_lines_v2(
+    table_avg,
+    table_std,
+    methods,
+    title,
+    xlabel,
+    ylabel,
+    ylim,
+    legend=False,
+    error_bar=False,
+    show_title=True,
+    show_xlabel=True,
+    show_ylabel=True,
+    ncols=6,
+    posic=(-1.5, -.35)
+):
+
+    # markers = ['o', 'v', '*', 'x', 's','p']
+    # jitters = [-6.3,-3.7,-1.3,1.3,3.7,6.3]
+    total_methods = len(methods)
+
+    markers = ['o', 'v', '*', 'x', 's','p'] + ['o'] * total_methods
+    # jitters = [-6.3,-3.7,-1.3,1.3,3.7,6.3]
+    jitters = np.linspace(-6.3, 6.3, total_methods)
+    colors = matplotlib.rcParams['axes.prop_cycle'].by_key()['color'][:9]
+    j = 0
+    extra_color_idx = 0
+    extra_colors = EXTRA_COLORS
+    # for method, values in table_avg.items():
+
+    for method in methods:
+
+        cur_color = color_mappings.get(method)
+        if cur_color is None:
+            cur_color = extra_colors[extra_color_idx]
+            extra_color_idx += 1
+
+        if method == 'mean_train_score':
+            values = table_avg[method]
+            x = np.array(list(values.keys()))
+            y = np.array(list(values.values()))
+            s = np.array(list(table_std[method].values()))
+
+            # Plot horizontal lines for mean and mean ± std
+            plt.axhline(y=np.mean(y), color=cur_color, linestyle='--', alpha=0.5, label=rename_mappings.get(method, method))
+            # plt.axhline(y=np.mean(y) + np.mean(s), color=cur_color, linestyle=':', alpha=0.3)
+            # plt.axhline(y=np.mean(y) - np.mean(s), color=cur_color, linestyle=':', alpha=0.3)
+            continue
+
+        values = table_avg[method]
+        x = np.array(list(values.keys()))
+        y = np.array(list(values.values()))
+        s = np.array(list(table_std[method].values()))
+
+        if error_bar:
+            plt.errorbar(
+                (x + jitters[j]),
+                y,
+                color=cur_color,
+                yerr=s,
+                label=rename_mappings.get(method, method),
+                marker=markers[j],
+                **style
+            )
+        else:
+            plt.plot(x, y, label=method)
+
+        j+=1
+    if show_xlabel: plt.xlabel(xlabel, size=11)
+    if show_ylabel: plt.ylabel(ylabel, size=11)
+    plt.ylim(ylim[0], ylim[1])
+    if show_title:
+        plt.title(title)
+    else:
+        pass
+
+    tick_label_size = 10  # Example size, adjust as needed
+    plt.tick_params(axis='x', labelsize=tick_label_size)
+    plt.tick_params(axis='y', labelsize=tick_label_size)
+
+    if legend: plt.legend(loc='upper center', ncols=ncols, bbox_to_anchor=posic)
+    plt.grid(alpha=.2)
+    #plt.grid(which='major', color='black', linestyle='-')
+    #plt.grid(which='minor', color='gray', linestyle=':')
+    #plt.show()
+
+
 def winrate(x,axis):
     n = x.shape[axis]
     return(np.argsort(np.argsort(x, axis=axis), axis=axis)/n)
 
-def load_scores(bench, split):
+def load_scores(bench, split, scenarios_to_skip=[]):
     with open(f'results/accs_{bench}_split-{split}_iterations-5.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
@@ -124,6 +233,10 @@ def load_scores(bench, split):
     for scenario in scenarios:
         filtered_scenarios[scenario] = []
         for sub in scenarios[scenario]:
+            if sub in scenarios_to_skip:
+                # print(bench, split)
+                print(f"Sub-scenario {sub} of scenario {scenario} is in the skip list: {scenarios_to_skip}, so skipping it")
+                continue
             if sub not in data2['data']:
                 print(f"Sub-scenario {sub} of scenario {scenario} not found in data2, so skipping it")
                 continue

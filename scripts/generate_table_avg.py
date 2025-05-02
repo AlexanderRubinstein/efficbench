@@ -21,6 +21,7 @@ sys.path.pop(0)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_suffix_mmlu_fields', type=str, help='path suffix', default='')
+    parser.add_argument('--scenarios_to_skip', type=str, help='scenarios to skip', default='')
     args = parser.parse_args()
     path_suffix_mmlu_fields = args.path_suffix_mmlu_fields
 
@@ -61,7 +62,7 @@ def main():
             methods = list(data[models[0]][number_items[0]].keys())
             scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
             data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
-            scores = load_scores(bench, split)
+            scores = load_scores(bench, split, scenarios_to_skip=args.scenarios_to_skip.split(','))
 
             if agg == 'leaderboard':
                 if bench=='helm':
