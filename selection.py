@@ -199,7 +199,7 @@ def sample_by_disagreement(
                 seen_items_scenario += top_by_disagreement
                 i += 1
 
-            item_weights[scenario] = np.ones(number_item)/number_item
+            # item_weights[scenario] = np.ones(number_item)/number_item
 
             seen_items += seen_items_scenario
     else:
@@ -215,6 +215,8 @@ def sample_by_disagreement(
                 seen_items = sorted_by_disagreement[-number_item:]
             else:
                 seen_items = []
+    for scenario in scenarios_choosen:
+        item_weights[scenario] = np.ones(number_item)/number_item
 
     unseen_items = [i for i in range(num_samples_in_test) if i not in seen_items]
 

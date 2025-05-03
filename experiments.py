@@ -408,6 +408,7 @@ def evaluate_scenarios(
                     scores_test,
                     scores_train,
                     train_model_true_accs,
+                    accs_true,
                     fitted_weights,
                     responses_test,
                     train_models_embeddings,
@@ -525,6 +526,7 @@ def make_fitted_weights(
     )
 
     fitted_weights = {}
+    # TODO(Alex | 03.05.2025): use convert_accs_to_numpy here
     train_model_true_accs_np = np.array(
         [
             train_model_true_accs[i][scenario]
@@ -532,6 +534,7 @@ def make_fitted_weights(
                     in range(len(train_model_true_accs))
         ]
     )
+
     for sampling_name in sampling_names:
         fitted_weights[sampling_name] = {}
         for number_item in number_items:

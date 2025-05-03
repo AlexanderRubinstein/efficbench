@@ -43,6 +43,11 @@ color_mappings = {
     # 'anchor-irt_pirt': '#2ca02c',
 }
 
+CONSTANT_ESTIMATORS = [
+    "mean_train_score",
+    "perfect_knn",
+]
+
 EXTRA_COLORS = [
     '#17becf',
     '#bcbd22',
@@ -223,7 +228,7 @@ def make_perf_table(
                 df_dict[number_item] = {}
             dict_per_num_anchors = df_dict[number_item]
 
-            if method == "mean_train_score":
+            if method in CONSTANT_ESTIMATORS:
                 sampling_name = "-"
                 prediction_name = method
             else:

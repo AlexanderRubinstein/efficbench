@@ -19,6 +19,8 @@ from sklearn.ensemble import (
     RandomForestRegressor,
     GradientBoostingRegressor
 )
+from plots import CONSTANT_ESTIMATORS
+import numpy as np
 
 ESTIMATORS = [
     'naive',
@@ -26,6 +28,7 @@ ESTIMATORS = [
     'cirt',
     'gpirt',
     "mean_train_score", # [ADD][new estimator]
+    "perfect_knn", # [ADD][new estimator]
     "KNN", # [ADD][new estimator]
 ]
 
@@ -87,7 +90,7 @@ def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen
 
 
 def make_method_name(sampling_name, est):
-    if est == "mean_train_score":
+    if est in CONSTANT_ESTIMATORS:
         return est
     else:
         return sampling_name + "_" + est
@@ -103,6 +106,7 @@ def calculate_accuracies(
     scores_test,
     scores_train,
     train_model_true_accs,
+    test_model_true_accs,
     fitted_weights,
     responses_test,
     train_models_embeddings,
@@ -197,6 +201,11 @@ def calculate_accuracies(
                         accs[rows_to_hide[j]][number_item][sampling_name + '_KNN'][scenario].append(knn_acc)
 
                         # [ADD][new estimator] fitted weights
+                        if len(accs[rows_to_hide[j]][number_item]['perfect_knn'][scenario]) < iterations:
+                            perfect_knn_acc = compute_perfect_knn(train_model_true_accs, test_model_true_accs[rows_to_hide[j]], scenario)
+                            accs[rows_to_hide[j]][number_item]['perfect_knn'][scenario].append(perfect_knn_acc) # does not depend on sampling type
+
+                        # [ADD][new estimator] fitted weights
                         for model_key, fitted_model in fitted_weights[sampling_name][number_item][it].items():
                             fitted_acc = fitted_model.predict(test_model_embedding.numpy().reshape(1, -1))[0]
                             accs[rows_to_hide[j]][number_item][sampling_name + f'_{model_key}'][scenario].append(fitted_acc)
@@ -236,6 +245,27 @@ def compute_acc_knn(
 
     # Return accuracy of most similar example
     return train_model_true_accs[most_similar_idx][scenario]
+
+
+def compute_perfect_knn(train_model_true_accs, test_model_true_acc, scenario):
+    """
+    Compute the accuracy of the perfect KNN estimator.
+    """
+    train_model_true_accs_np = convert_accs_to_numpy(train_model_true_accs, scenario)
+    closest_index = np.argmin(np.abs(train_model_true_accs_np - test_model_true_acc[scenario]))
+    return train_model_true_accs[closest_index][scenario]
+
+
+def convert_accs_to_numpy(accs, scenario):
+    """
+    Convert the accuracies to a numpy array.
+    """
+    return np.array(
+        [
+            accs[i][scenario]
+                for i in accs.keys()
+        ]
+    )
 
 
 def compute_true_acc(

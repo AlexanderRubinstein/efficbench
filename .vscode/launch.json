@@ -31,7 +31,7 @@
                 "random,high-disagreement+nonstratified",
                 // "random,high-disagreement",
                 "--filename_suffix",
-                "_disagreement"
+                "_disagreement_debug"
                 // "_reproduced"
             ],
             "console": "integratedTerminal",
@@ -44,7 +44,8 @@
             "console": "integratedTerminal",
             "args": [
                 "--filename_suffix_mmlu_fields",
-                "_disagreement",
+                // "_disagreement",
+                "_disagreement_debug",
                 // "",
                 "--scenarios_to_skip",
                 "harness_gsm8k_5"
