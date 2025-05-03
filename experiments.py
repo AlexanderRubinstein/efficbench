@@ -638,7 +638,7 @@ def make_disagreement_scores_dict(
             continue
         disagreement_key = sampling_name.split('-')[1]
         if '@' in disagreement_key:
-            n_guiding_models = int(sampling_name.split('@')[1])
+            n_guiding_models = int(sampling_name.split('@')[1].split('+')[0])
         else:
             n_guiding_models = None
         if not disagreement_key in disagreement_scores_dict:
