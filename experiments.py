@@ -23,7 +23,8 @@ from utils import (
 from selection import (
     select_initial_adaptive_items,
     sample_items,
-    sample_items_adaptive
+    sample_items_adaptive,
+    get_disagreement_scores
 )
 # from acc import *
 from acc import (
@@ -244,34 +245,46 @@ def evaluate_scenarios(
             cache_key = make_cache_key(scenario_name, split_number, 'sampling')
         else:
             cache_key = None
+
+        disagreement_scores_cache_path = make_cache_subpath(cache, scenario_name, split_number, f'disagreement_scores_path')
+        disagreement_scores_dict = make_or_load_from_cache(
+            object_name="disagreement_scores_dict",
+            object_config={
+                "sampling_names": sampling_names,
+                "predictions_train": predictions_train,
+            },
+            make_func=make_disagreement_scores_dict,
+            cache_path=disagreement_scores_cache_path,
+        )
+
         for sampling_name in tqdm(sampling_names):
             if skip_irt and sampling_name == 'anchor-irt':
                 continue
 
             if 'adaptive' in sampling_name:
                 raise NotImplementedError
-                item_weights_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
-                seen_items_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
-                unseen_items_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
-                sampling_time_dic[sampling_name] = {number_item: [] for number_item in number_items}
+                # item_weights_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
+                # seen_items_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
+                # unseen_items_dic[sampling_name] = {number_item: {n_model: [] for n_model in range(responses_test.shape[0])} for number_item in number_items}
+                # sampling_time_dic[sampling_name] = {number_item: [] for number_item in number_items}
 
-                inital_items = select_initial_adaptive_items(A, B, Theta, D+1, try_size=10000)
+                # inital_items = select_initial_adaptive_items(A, B, Theta, D+1, try_size=10000)
 
-                pool = mp.Pool(cpu)
-                # parallelising models
-                samples = pool.starmap(sample_items_adaptive, [(number_items, iterations, sampling_name, chosen_scenarios, scenarios,
-                                                                subscenarios_position, responses, scores_train, scenarios_position,
-                                                                A, B, balance_weights, inital_items) for responses in responses_test])
-                pool.close()
-                pool.join()
-                for n_model, samples_model in enumerate(samples): #zip(rows_to_hide, samples):
-                    item_weights_model, seen_items_model, unseen_items_model, sampling_time = samples_model
-                    sampling_time = np.array(sampling_time).mean()
-                    for number_item in number_items:
-                        item_weights_dic[sampling_name][number_item][n_model] = item_weights_model[number_item]
-                        seen_items_dic[sampling_name][number_item][n_model] = seen_items_model[number_item]
-                        unseen_items_dic[sampling_name][number_item][n_model] = unseen_items_model[number_item]
-                        sampling_time_dic[sampling_name][number_item].append(sampling_time)
+                # pool = mp.Pool(cpu)
+                # # parallelising models
+                # samples = pool.starmap(sample_items_adaptive, [(number_items, iterations, sampling_name, chosen_scenarios, scenarios,
+                #                                                 subscenarios_position, responses, scores_train, scenarios_position,
+                #                                                 A, B, balance_weights, disagreement_scores_dict, inital_items) for responses in responses_test])
+                # pool.close()
+                # pool.join()
+                # for n_model, samples_model in enumerate(samples): #zip(rows_to_hide, samples):
+                #     item_weights_model, seen_items_model, unseen_items_model, sampling_time = samples_model
+                #     sampling_time = np.array(sampling_time).mean()
+                #     for number_item in number_items:
+                #         item_weights_dic[sampling_name][number_item][n_model] = item_weights_model[number_item]
+                #         seen_items_dic[sampling_name][number_item][n_model] = seen_items_model[number_item]
+                #         unseen_items_dic[sampling_name][number_item][n_model] = unseen_items_model[number_item]
+                #         sampling_time_dic[sampling_name][number_item].append(sampling_time)
             else:
 
                 if cache_key is not None and cache_key in cache:
@@ -297,6 +310,7 @@ def evaluate_scenarios(
                             A,
                             B,
                             balance_weights,
+                            disagreement_scores_dict,
                             skip_irt
                         ) for number_item in number_items]
                     )
@@ -605,3 +619,31 @@ def make_fitted_model(
         print(f"Training RMSE of {model_name} for samplng={sampling_name}, n_anchor={number_item}, run={it}: {train_rmse}")
 
     return fitted_model
+
+
+def make_disagreement_scores_dict(
+    config,
+    logger=None
+):
+    (
+        sampling_names,
+        predictions_train,
+    ) = (
+        config["sampling_names"],
+        config["predictions_train"],
+    )
+    disagreement_scores_dict = {}
+    for sampling_name in sampling_names:
+        if not 'disagreement' in sampling_name:
+            continue
+        disagreement_key = sampling_name.split('-')[1]
+        if '@' in disagreement_key:
+            n_guiding_models = int(sampling_name.split('@')[1])
+        else:
+            n_guiding_models = None
+        if not disagreement_key in disagreement_scores_dict:
+            disagreement_scores_dict[disagreement_key] = get_disagreement_scores(
+                predictions_train,
+                n_guiding_models
+            )
+    return disagreement_scores_dict

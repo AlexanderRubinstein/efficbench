@@ -16,3 +16,4 @@ data/lb.pickle
 data/mmlu_fields.pickle
 results/samples_mmlu_fields_iterations-5.pickle
 df_100.csv
+disagreement_scores_per_strata

@@ -93,7 +93,46 @@ def stratified_num_items(number_item, scenarios):
     return number_items_sub
 
 
+def pds(logits):
+
+    def are_probs(logits):
+        if (
+                logits.min() >= 0
+            and
+                logits.max() <= 1
+        ):
+            return True
+        return False
+
+
+    def get_probs(logits):
+        if are_probs(logits):
+            probs = logits
+        else:
+            probs = F.softmax(logits, dim=-1)
+        return probs
+
+    # input shape: (num_models, num_samples, num_classes)
+    # output shape: (num_samples)
+
+    probs = get_probs(logits).clone()
+
+    max_by_model = probs.max(0).values
+    sum_over_classes = max_by_model.sum(-1)
+
+    return torch.Tensor(sum_over_classes)
+
+
+def get_disagreement_scores(predictions_train, n_guiding_models):
+    if n_guiding_models is not None:
+        guiding_models_indices = np.random.choice(predictions_train.shape[0], n_guiding_models, replace=False)
+        predictions_train = predictions_train[guiding_models_indices, ...]
+    pds_per_sample = pds(torch.Tensor(predictions_train))
+    return pds_per_sample.numpy()
+
+
 def sample_by_disagreement(
+    sampling_name,
     scenarios_choosen,
     scenarios,
     number_item,
@@ -101,85 +140,81 @@ def sample_by_disagreement(
     num_samples_in_test,
     predictions_train,
     balance_weights,
+    disagreement_scores_dict,
     random_seed,
-    high_first=False
+    high_first=False,
+    # n_guiding_models=None
 ):
 
     """
     Select items with high disagreement between models.
     """
 
-    def pds(logits):
-
-        def are_probs(logits):
-            if (
-                    logits.min() >= 0
-                and
-                    logits.max() <= 1
-            ):
-                return True
-            return False
-
-        def get_probs(logits):
-            if are_probs(logits):
-                probs = logits
-            else:
-                probs = F.softmax(logits, dim=-1)
-            return probs
-
-        # input shape: (num_models, num_samples, num_classes)
-        # output shape: (num_samples)
-
-        probs = get_probs(logits).clone()
-
-        max_by_model = probs.max(0).values
-        sum_over_classes = max_by_model.sum(-1)
-
-        return torch.Tensor(sum_over_classes)
-
-    def get_disagreement_scores(predictions_train, num_samples_in_test):
-        pds_per_sample = pds(torch.Tensor(predictions_train))
-        return pds_per_sample.numpy()
-
     seen_items = []  # Initialize an empty list to hold the indices of seen items.
     item_weights = {}
 
-    disagreement_scores = get_disagreement_scores(
-        predictions_train,
-        num_samples_in_test
-    )
+    disagreement_key = sampling_name.split('-')[1]
+    disagreement_scores = disagreement_scores_dict[disagreement_key]
+    if '+nonstratified' == sampling_name[-14:]:
+        stratified = False
+    else:
+        stratified = True
 
-    # Iterate through each chosen scenario to determine the seen items.
-    for scenario in scenarios_choosen:
+    if stratified:
+        # Iterate through each chosen scenario to determine the seen items.
+        for scenario in scenarios_choosen:
 
-        seen_items_scenario = []
+            seen_items_scenario = []
 
-        number_items_sub = stratified_num_items(number_item, scenarios[scenario])
+            number_items_sub = stratified_num_items(number_item, scenarios[scenario])
 
-        # Note: scenario - e.g. mmlu
-        # subscenario - e.g. harness_hendrycksTest_sociology_5
-        # subscenarios_position - samples' indices that correspond to each subscenario
+            # Note: scenario - e.g. mmlu
+            # subscenario - e.g. harness_hendrycksTest_sociology_5
+            # subscenarios_position - samples' indices that correspond to each subscenario
 
-        i = 0
-        for sub in scenarios[scenario]:
-            sorted_by_disagreement = sorted(
-                subscenarios_position[scenario][sub],
-                key=lambda x: disagreement_scores[x],
-                reverse=True
-            )
-            if high_first:
-                top_by_disagreement = sorted_by_disagreement[:number_items_sub[i]]
-            else:
-                if number_items_sub[i] > 0:
-                    top_by_disagreement = sorted_by_disagreement[-number_items_sub[i]:]
+            i = 0
+            for sub in scenarios[scenario]:
+                sorted_by_disagreement = sorted(
+                    subscenarios_position[scenario][sub],
+                    key=lambda x: disagreement_scores[x],
+                    reverse=True
+                )
+                # print("DEBUG: save disagreement scores per strata")
+                # import os
+                # if '@' in disagreement_key:
+                #     n_guiding_models = int(sampling_name.split('@')[1])
+                # else:
+                #     n_guiding_models = 'all'
+                # os.makedirs(f"disagreement_scores_per_strata", exist_ok=True)
+                # torch.save(disagreement_scores[sorted_by_disagreement], f"disagreement_scores_per_strata/disagreement_sub={sub}_n_guiding={n_guiding_models}.pth")
+                # #########################################################
+
+                if high_first:
+                    top_by_disagreement = sorted_by_disagreement[:number_items_sub[i]]
                 else:
-                    top_by_disagreement = []
-            seen_items_scenario += top_by_disagreement
-            i += 1
+                    if number_items_sub[i] > 0:
+                        top_by_disagreement = sorted_by_disagreement[-number_items_sub[i]:]
+                    else:
+                        top_by_disagreement = []
+                seen_items_scenario += top_by_disagreement
+                i += 1
 
-        item_weights[scenario] = np.ones(number_item)/number_item
+            item_weights[scenario] = np.ones(number_item)/number_item
 
-        seen_items += seen_items_scenario
+            seen_items += seen_items_scenario
+    else:
+        sorted_by_disagreement = sorted(
+            list(range(len(disagreement_scores))),
+            key=lambda x: disagreement_scores[x],
+            reverse=True
+        )
+        if high_first:
+            seen_items = sorted_by_disagreement[:number_item]
+        else:
+            if number_item > 0:
+                seen_items = sorted_by_disagreement[-number_item:]
+            else:
+                seen_items = []
 
     unseen_items = [i for i in range(num_samples_in_test) if i not in seen_items]
 
@@ -423,6 +458,7 @@ def sample_items(
     A,
     B,
     balance_weights,
+    disagreement_scores_dict,
     skip_irt=False
 ):
     assert 'adaptive' not in sampling_name
@@ -436,7 +472,12 @@ def sample_items(
     for it in range(iterations):
         # if sampling_name == 'high-disagreement':
         if 'disagreement' in sampling_name:
+            # if '@' in sampling_name:
+            #     n_guiding_models = int(sampling_name.split('@')[1])
+            # else:
+            #     n_guiding_models = None
             item_weights, seen_items, unseen_items = sample_by_disagreement(
+                sampling_name,
                 chosen_scenarios,
                 scenarios,
                 number_item,
@@ -444,8 +485,10 @@ def sample_items(
                 num_samples_in_test=responses_test.shape[1],
                 predictions_train=predictions_train,
                 balance_weights=balance_weights,
+                disagreement_scores_dict=disagreement_scores_dict,
                 random_seed=it,
-                high_first=(sampling_name == 'high-disagreement')
+                high_first=('high' in sampling_name),
+                # n_guiding_models=n_guiding_models
             )
         elif sampling_name == 'random':
             item_weights, seen_items, unseen_items = get_random(chosen_scenarios, scenarios, number_item, subscenarios_position, responses_test, balance_weights, random_seed=it)
@@ -472,6 +515,7 @@ def sample_items(
 
 def sample_items_adaptive(number_items, iterations, sampling_name, chosen_scenarios, scenarios, subscenarios_position,
                  responses_model, scores_train, scenarios_position, A, B, balance_weights,
+                #  disagreement_scores_dict,
                  initial_items=None, balance=True,
                  ):
     assert 'adaptive' in sampling_name

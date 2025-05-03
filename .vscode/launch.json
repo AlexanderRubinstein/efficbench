@@ -27,7 +27,8 @@
                 "--num_workers",
                 "4",
                 "--sampling_names",
-                "random,high-disagreement,low-disagreement",
+                // "random,high-disagreement,low-disagreement,low-disagreement@2,high-disagreement@2,low-disagreement@10,high-disagreement@10,low-disagreement@100,high-disagreement@100",
+                "random,high-disagreement+nonstratified",
                 // "random,high-disagreement",
                 "--filename_suffix",
                 "_disagreement"
