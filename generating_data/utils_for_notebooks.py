@@ -1,7 +1,7 @@
 from tqdm import tqdm
 from stnd.utility.utils import parse_list_from_string
 import numpy as np
-
+import torch
 
 MAX_NUM_ANSWERS = 31 # 5 for arc_harness_25, 31 for truth_harness_mc
 KEYS_TO_ADD = ["correctness", "predictions"]
@@ -86,3 +86,28 @@ def parse_df_with_results(
     return data, max_answers_dict
 
     # print(max(max_answers_dict.values()))
+
+
+def compare_dicts_with_arrays(d1, d2, prefix=""):
+    if d1.keys() != d2.keys():
+        return False
+    for k in d1.keys():
+        full_path = (prefix+f"/{k}")
+        error_str = f"not equal for {full_path}"
+        if isinstance(d1[k], dict):
+            if not compare_dicts_with_arrays(d1[k], d2[k], prefix=full_path):
+                print(error_str)
+                return False
+        elif isinstance(d1[k], np.ndarray):
+            if not (np.array_equal(d1[k], d2[k]) or (np.isnan(d1[k]).all() and np.isnan(d2[k]).all())):
+                print(error_str)
+                return False
+        elif torch.is_tensor(d1[k]):
+            if not (torch.equal(d1[k], d2[k]) or (d1[k].isnan().all() and d2[k].isnan().all())):
+                print(error_str)
+                return False
+        else:
+            if d1[k] != d2[k]:
+                print(error_str)
+                return False
+    return True

@@ -13,6 +13,10 @@ from acc import (
     calculate_accuracies,
     compute_true_acc
 )
+from utils_from_stuned import (
+    make_or_load_from_cache
+)
+from generating_data.utils_for_notebooks import compare_dicts_with_arrays
 
 
 def make_cache_key(scenario_name, split_number, suffix):
@@ -323,35 +327,33 @@ def evaluate_scenarios(
         )
 
         if cache is not None:
-            cache_key = make_cache_key(scenario_name, split_number, f'embeddings')
+            cache_dir = cache["cache_path"].split(".")[0] + "_folder"
+            cache_key = make_cache_key(scenario_name, split_number, f'embeddings_path')
+            emb_cache_path = os.path.join(cache_dir, cache_key + ".pkl")
         else:
-            cache_key = None
+            emb_cache_path = None
 
-        if cache_key is not None and cache_key in cache:
-            train_models_embeddings, test_models_embeddings = cache[cache_key]
-        else:
-            train_models_embeddings = {}
-            test_models_embeddings = {}
-            for sampling_name in sampling_names:
-                train_models_embeddings[sampling_name] = {}
-                test_models_embeddings[sampling_name] = {}
-                for number_item in number_items:
-                    train_models_embeddings[sampling_name][number_item] = {}
-                    test_models_embeddings[sampling_name][number_item] = {}
-                    for it in range(iterations):
-                        train_models_embeddings[sampling_name][number_item][it] = compute_embedding(
-                            predictions_train,
-                            seen_items_dic[sampling_name][number_item][it]
-                        )
-                        test_models_embeddings[sampling_name][number_item][it] = compute_embedding(
-                            predictions_test,
-                            seen_items_dic[sampling_name][number_item][it]
-                        )
-
-            if cache_key is not None:
-                cache[cache_key] = train_models_embeddings, test_models_embeddings
-                dump_pickle(cache, cache["cache_path"])
-
+        train_models_embeddings, test_models_embeddings = make_or_load_from_cache(
+            object_name="train_test_model_embeddings",
+            object_config={
+                "sampling_names": sampling_names,
+                "number_items": number_items,
+                "iterations": iterations,
+                "predictions_train": predictions_train,
+                "seen_items_dic": seen_items_dic,
+                "predictions_test": predictions_test,
+                "seen_items_dic": seen_items_dic
+            },
+            make_func=make_train_test_model_embeddings,
+            # load_func=default_pickle_load,
+            # save_func=default_pickle_save,
+            cache_path=emb_cache_path,
+            # forward_cache_path=False,
+            # logger=None,
+            # unique_hash=None,
+            # verbose=False,
+            # check_gc=False,
+        )
 
         for j in tqdm(range(len(rows_to_hide))):
             out.append(
@@ -416,3 +418,44 @@ def evaluate_scenarios(
 
 def compute_embedding(predictions, anchor_indices):
     return torch.Tensor(predictions)[:, anchor_indices, :].softmax(dim=-1).reshape(predictions.shape[0], -1)
+
+
+def make_train_test_model_embeddings(
+    emb_config,
+    logger=None
+):
+    (
+        sampling_names,
+        number_items,
+        iterations,
+        predictions_train,
+        seen_items_dic,
+        predictions_test,
+        seen_items_dic
+    ) = (
+        emb_config["sampling_names"],
+        emb_config["number_items"],
+        emb_config["iterations"],
+        emb_config["predictions_train"],
+        emb_config["seen_items_dic"],
+        emb_config["predictions_test"],
+        emb_config["seen_items_dic"]
+    )
+    train_models_embeddings = {}
+    test_models_embeddings = {}
+    for sampling_name in sampling_names:
+        train_models_embeddings[sampling_name] = {}
+        test_models_embeddings[sampling_name] = {}
+        for number_item in number_items:
+            train_models_embeddings[sampling_name][number_item] = {}
+            test_models_embeddings[sampling_name][number_item] = {}
+            for it in range(iterations):
+                train_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                    predictions_train,
+                    seen_items_dic[sampling_name][number_item][it]
+                )
+                test_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                    predictions_test,
+                    seen_items_dic[sampling_name][number_item][it]
+                )
+    return train_models_embeddings, test_models_embeddings
