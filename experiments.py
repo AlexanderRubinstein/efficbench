@@ -4,6 +4,7 @@ from copy import copy
 import multiprocessing as mp
 import time
 import os
+from copy import deepcopy
 # from irt import *
 # from selection import *
 from irt import (
@@ -523,10 +524,12 @@ def make_fitted_weights(
 
                 fitted_weights[sampling_name][number_item][it] = {}
 
-                for model_name, model in FITTING_METHODS:
+                for model_name, builder in FITTING_METHODS:
+                    builder_func, builder_kwargs = builder
+                    model = builder_func(**builder_kwargs)
                     if sampling_name in ["high-disagreement", "low-disagreement"] and it > 0:
                         # for deterministic sampling fitted model does not change for different runs
-                        fitted_model = fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}']
+                        fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}'])
                     else:
                         fitted_model = model.fit(
                             cur_train_models_embeddings_np,

@@ -22,6 +22,7 @@
                 "--skip_irt",
                 "--cache_path",
                 "cache/mmlu_fields_iid_5_cuda_02052025.pickle",
+                // "cache/mmlu_fields_iid_5_cuda_03052025_gsheet.pickle",
                 "--num_workers",
                 "4",
                 "--sampling_names",

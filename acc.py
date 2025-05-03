@@ -30,23 +30,23 @@ ESTIMATORS = [
 ]
 
 FITTING_METHODS = [
-    ('LinearRegression', LinearRegression()),
-    ('Ridge_01', Ridge(alpha=0.1)),
-    ('Ridge_1', Ridge(alpha=1)),
-    ('Ridge_10', Ridge(alpha=10)),
-    ('Lasso_01', Lasso(alpha=0.1)),
-    ('Lasso_1', Lasso(alpha=1)),
-    ('Lasso_10', Lasso(alpha=10)),
-    ('RandomForestRegressor_50', RandomForestRegressor(n_estimators=50)),
-    ('RandomForestRegressor_100', RandomForestRegressor(n_estimators=100)),
-    ('RandomForestRegressor_200', RandomForestRegressor(n_estimators=200)),
-    ('GradientBoostingRegressor_50', GradientBoostingRegressor(n_estimators=50)),
-    ('GradientBoostingRegressor_100', GradientBoostingRegressor(n_estimators=100)),
-    ('GradientBoostingRegressor_200', GradientBoostingRegressor(n_estimators=200)),
+    ('LinearRegression', (LinearRegression, {})),
+    ('Ridge_01', (Ridge, {'alpha': 0.1})),
+    ('Ridge_1', (Ridge, {'alpha': 1})),
+    ('Ridge_10', (Ridge, {'alpha': 10})),
+    ('Lasso_01', (Lasso, {'alpha': 0.1})),
+    ('Lasso_1', (Lasso, {'alpha': 1})),
+    ('Lasso_10', (Lasso, {'alpha': 10})),
+    ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
+    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
+    ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
+    ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
+    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
 ]
 
 # [ADD][new estimator]
-for model_name in FITTING_METHODS:
+for model_name, builder in FITTING_METHODS:
     ESTIMATORS.append(f"fitted-{model_name}")
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
