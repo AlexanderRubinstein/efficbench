@@ -3,12 +3,31 @@ import pickle
 from copy import copy
 import multiprocessing as mp
 import time
-from irt import *
-from selection import *
-from utils import load_pickle, dump_pickle
+import os
+# from irt import *
+# from selection import *
+from irt import (
+    create_irt_dataset,
+    train_irt_model,
+    load_irt_parameters,
+    estimate_ability_parameters
+)
+from utils import (
+    get_lambda,
+    load_pickle,
+    dump_pickle,
+    prepare_and_split_data,
+    item_curve,
+)
+from selection import (
+    select_initial_adaptive_items,
+    sample_items,
+    sample_items_adaptive
+)
 # from acc import *
 from acc import (
     ESTIMATORS,
+    FITTING_METHODS,
     make_method_name,
     calculate_accuracies,
     compute_true_acc
@@ -18,7 +37,7 @@ from utils_from_stuned import (
 )
 from generating_data.utils_for_notebooks import compare_dicts_with_arrays
 import numpy as np
-from sklearn.linear_model import LinearRegression
+import torch
 
 
 def make_cache_key(scenario_name, split_number, suffix):
@@ -500,21 +519,27 @@ def make_fitted_weights(
         for number_item in number_items:
             fitted_weights[sampling_name][number_item] = {}
             for it in range(iterations):
-
                 cur_train_models_embeddings_np = train_models_embeddings[sampling_name][number_item][it].numpy()
-                reg = LinearRegression().fit(
-                    cur_train_models_embeddings_np,
-                    train_model_true_accs_np
-                )
 
-                # Compute training RMSE
-                train_preds = reg.predict(cur_train_models_embeddings_np)
-                train_rmse = np.sqrt(np.mean((train_preds - train_model_true_accs_np) ** 2))
-                print(f"Training RMSE for {sampling_name} {number_item} {it}: {train_rmse}")
+                fitted_weights[sampling_name][number_item][it] = {}
 
-                fitted_weights[sampling_name][number_item][it] = {
-                    'fitted_model': reg,
-                }
+                for model_name, model in FITTING_METHODS:
+                    if sampling_name in ["high-disagreement", "low-disagreement"] and it > 0:
+                        # for deterministic sampling fitted model does not change for different runs
+                        fitted_model = fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}']
+                    else:
+                        fitted_model = model.fit(
+                            cur_train_models_embeddings_np,
+                            train_model_true_accs_np
+                        )
+
+                        # Compute training RMSE
+                        train_preds = fitted_model.predict(cur_train_models_embeddings_np)
+                        train_rmse = np.sqrt(np.mean((train_preds - train_model_true_accs_np) ** 2))
+
+                        print(f"Training RMSE of {model_name} for samplng={sampling_name}, n_anchor={number_item}, run={it}: {train_rmse}")
+
+                    fitted_weights[sampling_name][number_item][it][f'fitted-{model_name}'] = fitted_model
 
     return fitted_weights
 

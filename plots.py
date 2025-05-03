@@ -52,7 +52,12 @@ EXTRA_COLORS = [
     '#98df8a',
     '#ff9896',
     '#c5b0d5',
-    '#c49c94'
+    '#c49c94',
+    '#f7b6d2',
+    '#9467bd',
+    '#8c564b',
+    '#1f77b4',
+    '#2ca02c',
 ]
 
 benchs = ['lb', 'mmlu', 'helm_lite', 'alpaca','mmlu_fields', 'icl_templates']
@@ -201,6 +206,38 @@ def plot_perf_lines_v2(
     #plt.grid(which='major', color='black', linestyle='-')
     #plt.grid(which='minor', color='gray', linestyle=':')
     #plt.show()
+
+
+def make_perf_table(
+    table_avg,
+    table_std,
+    methods,
+):
+
+    df_dict = {}
+
+    for method in methods:
+
+        for number_item in table_avg[method].keys():
+            if number_item not in df_dict.keys():
+                df_dict[number_item] = {}
+            dict_per_num_anchors = df_dict[number_item]
+
+            if method == "mean_train_score":
+                sampling_name = "-"
+                prediction_name = method
+            else:
+                sampling_name, prediction_name = method.split('_')
+
+            if sampling_name not in dict_per_num_anchors.keys():
+                dict_per_num_anchors[sampling_name] = {}
+
+            values = table_avg[method]
+            estimation_error = values[number_item]
+
+            dict_per_num_anchors[sampling_name][prediction_name] = estimation_error
+
+    return {num_samples: pd.DataFrame(df_dict[num_samples]).T for num_samples in df_dict.keys()}
 
 
 def winrate(x,axis):

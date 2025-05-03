@@ -10,6 +10,15 @@ from utils import (
 )
 import torch
 import torch.nn.functional as F
+from sklearn.linear_model import (
+    LinearRegression,
+    Ridge,
+    Lasso,
+)
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    GradientBoostingRegressor
+)
 
 ESTIMATORS = [
     'naive',
@@ -18,8 +27,27 @@ ESTIMATORS = [
     'gpirt',
     "mean_train_score", # [ADD][new estimator]
     "KNN", # [ADD][new estimator]
-    "fitted_weights" # [ADD][new estimator]
 ]
+
+FITTING_METHODS = [
+    ('LinearRegression', LinearRegression()),
+    ('Ridge_01', Ridge(alpha=0.1)),
+    ('Ridge_1', Ridge(alpha=1)),
+    ('Ridge_10', Ridge(alpha=10)),
+    ('Lasso_01', Lasso(alpha=0.1)),
+    ('Lasso_1', Lasso(alpha=1)),
+    ('Lasso_10', Lasso(alpha=10)),
+    ('RandomForestRegressor_50', RandomForestRegressor(n_estimators=50)),
+    ('RandomForestRegressor_100', RandomForestRegressor(n_estimators=100)),
+    ('RandomForestRegressor_200', RandomForestRegressor(n_estimators=200)),
+    ('GradientBoostingRegressor_50', GradientBoostingRegressor(n_estimators=50)),
+    ('GradientBoostingRegressor_100', GradientBoostingRegressor(n_estimators=100)),
+    ('GradientBoostingRegressor_200', GradientBoostingRegressor(n_estimators=200)),
+]
+
+# [ADD][new estimator]
+for model_name in FITTING_METHODS:
+    ESTIMATORS.append(f"fitted-{model_name}")
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
 
@@ -165,9 +193,9 @@ def calculate_accuracies(
                         accs[rows_to_hide[j]][number_item][sampling_name + '_KNN'][scenario].append(knn_acc)
 
                         # [ADD][new estimator] fitted weights
-                        fitted_model = fitted_weights[sampling_name][number_item][it]["fitted_model"]
-                        fitted_acc = fitted_model.predict(test_model_embedding.numpy().reshape(1, -1))[0]
-                        accs[rows_to_hide[j]][number_item][sampling_name + '_fitted_weights'][scenario].append(fitted_acc)
+                        for model_key, fitted_model in fitted_weights[sampling_name][number_item][it].items():
+                            fitted_acc = fitted_model.predict(test_model_embedding.numpy().reshape(1, -1))[0]
+                            accs[rows_to_hide[j]][number_item][sampling_name + f'_{model_key}'][scenario].append(fitted_acc)
 
                         if not skip_irt:
                             data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()

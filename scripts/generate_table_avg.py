@@ -61,6 +61,14 @@ def main():
             number_items = list(data[models[0]].keys())
             methods = list(data[models[0]][number_items[0]].keys())
             scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
+
+            # DEBUG: when can not create np array
+            # for method in methods:
+            #     for number_item in number_items:
+            #         for model in models:
+            #             for scenario in scenarios:
+            #                 print(model, number_item, method, scenario, len(data[model][number_item][method][scenario]))
+
             data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
             scores = load_scores(bench, split, scenarios_to_skip=args.scenarios_to_skip.split(','))
 
@@ -152,9 +160,9 @@ def main():
 
         # with open('results/table_avg.pickle', 'wb') as handle:
         #     pickle.dump(table_avg, handle)
-        dump_pickle(table_avg, 'results/table_avg.pickle')
+    dump_pickle(table_avg, 'results/table_avg.pickle')
 
-        dump_pickle(table_std, 'results/table_std.pickle')
+    dump_pickle(table_std, 'results/table_std.pickle')
 
 
 if __name__ == '__main__':
