@@ -30,23 +30,23 @@ ESTIMATORS = [
 ]
 
 FITTING_METHODS = [
-    ('LinearRegression', (LinearRegression, {})),
-    ('Ridge_01', (Ridge, {'alpha': 0.1})),
-    ('Ridge_1', (Ridge, {'alpha': 1})),
-    ('Ridge_10', (Ridge, {'alpha': 10})),
-    ('Ridge_100', (Ridge, {'alpha': 100})),
-    ('Ridge_1000', (Ridge, {'alpha': 1000})),
-    ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
-    ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
-    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
-    ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
-    ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
-    ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
-    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
-    ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
-    ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
-    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
-    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+    # ('LinearRegression', (LinearRegression, {})),
+    # ('Ridge_01', (Ridge, {'alpha': 0.1})),
+    # ('Ridge_1', (Ridge, {'alpha': 1})),
+    ('Ridge_10', (Ridge, {'alpha': 10})), # best ridge
+    # ('Ridge_100', (Ridge, {'alpha': 100})),
+    # ('Ridge_1000', (Ridge, {'alpha': 1000})),
+    # ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
+    # ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
+    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})), # best lasso
+    # ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
+    # ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
+    # ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
+    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
+    # ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
+    # ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
+    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
+    # ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
 ]
 
 # [ADD][new estimator]

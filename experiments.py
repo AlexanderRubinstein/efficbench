@@ -374,7 +374,8 @@ def evaluate_scenarios(
                 "iterations": iterations,
                 "train_models_embeddings": train_models_embeddings,
                 "train_model_true_accs": train_model_true_accs,
-                "scenario": scenario
+                "scenario": scenario,
+                "cache_path": fitted_weights_cache_path
             },
             make_func=make_fitted_weights,
             cache_path=fitted_weights_cache_path,
@@ -497,14 +498,16 @@ def make_fitted_weights(
         iterations,
         train_models_embeddings,
         train_model_true_accs,
-        scenario
+        scenario,
+        cache_path
     ) = (
         config["sampling_names"],
         config["number_items"],
         config["iterations"],
         config["train_models_embeddings"],
         config["train_model_true_accs"],
-        config["scenario"]
+        config["scenario"],
+        config["cache_path"]
     )
 
     fitted_weights = {}
@@ -525,22 +528,26 @@ def make_fitted_weights(
                 fitted_weights[sampling_name][number_item][it] = {}
 
                 for model_name, builder in FITTING_METHODS:
-                    builder_func, builder_kwargs = builder
-                    model = builder_func(**builder_kwargs)
-                    if sampling_name in ["high-disagreement", "low-disagreement"] and it > 0:
-                        # for deterministic sampling fitted model does not change for different runs
-                        fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}'])
+
+                    if cache_path is not None:
+                        cache_dir = cache_path.split(".")[0] + "_folder"
                     else:
-                        fitted_model = model.fit(
-                            cur_train_models_embeddings_np,
-                            train_model_true_accs_np
-                        )
-
-                        # Compute training RMSE
-                        train_preds = fitted_model.predict(cur_train_models_embeddings_np)
-                        train_rmse = np.sqrt(np.mean((train_preds - train_model_true_accs_np) ** 2))
-
-                        print(f"Training RMSE of {model_name} for samplng={sampling_name}, n_anchor={number_item}, run={it}: {train_rmse}")
+                        cache_dir = None
+                    fitted_model = make_or_load_from_cache(
+                        object_name=f"fitted_model_{model_name}_{sampling_name}_{number_item}_{it}",
+                        object_config={
+                            "builder": builder,
+                            "sampling_name": sampling_name,
+                            "number_item": number_item,
+                            "it": it,
+                            "cur_train_models_embeddings_np": cur_train_models_embeddings_np,
+                            "train_model_true_accs_np": train_model_true_accs_np,
+                            "fitted_weights": fitted_weights,
+                            "model_name": model_name
+                        },
+                        make_func=make_fitted_model,
+                        cache_path=cache_dir,
+                    )
 
                     fitted_weights[sampling_name][number_item][it][f'fitted-{model_name}'] = fitted_model
 
@@ -555,3 +562,46 @@ def make_cache_subpath(cache, scenario_name, split_number, suffix):
     else:
         cache_path = None
     return cache_path
+
+
+def make_fitted_model(
+    config,
+    logger=None
+):
+    (
+        builder,
+        sampling_name,
+        number_item,
+        it,
+        cur_train_models_embeddings_np,
+        train_model_true_accs_np,
+        fitted_weights,
+        model_name
+    ) = (
+        config["builder"],
+        config["sampling_name"],
+        config["number_item"],
+        config["it"],
+        config["cur_train_models_embeddings_np"],
+        config["train_model_true_accs_np"],
+        config["fitted_weights"],
+        config["model_name"]
+    )
+    builder_func, builder_kwargs = builder
+    model = builder_func(**builder_kwargs)
+    if sampling_name in ["high-disagreement", "low-disagreement"] and it > 0:
+        # for deterministic sampling fitted model does not change for different runs
+        fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}'])
+    else:
+        fitted_model = model.fit(
+            cur_train_models_embeddings_np,
+            train_model_true_accs_np
+        )
+
+        # Compute training RMSE
+        train_preds = fitted_model.predict(cur_train_models_embeddings_np)
+        train_rmse = np.sqrt(np.mean((train_preds - train_model_true_accs_np) ** 2))
+
+        print(f"Training RMSE of {model_name} for samplng={sampling_name}, n_anchor={number_item}, run={it}: {train_rmse}")
+
+    return fitted_model
