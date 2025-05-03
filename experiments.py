@@ -17,6 +17,8 @@ from utils_from_stuned import (
     make_or_load_from_cache
 )
 from generating_data.utils_for_notebooks import compare_dicts_with_arrays
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 def make_cache_key(scenario_name, split_number, suffix):
@@ -312,7 +314,6 @@ def evaluate_scenarios(
             with open(f'results/samples_{bench[4:]}_iterations-{iterations}.pickle', 'wb') as handle:
                 pickle.dump(dic, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-
         print("\nv) computing accuracies")
         start_time = time.time()
 
@@ -326,12 +327,7 @@ def evaluate_scenarios(
             train_model_indices # they are not the global indices, but the contiguous indices of train models after removing test models
         )
 
-        if cache is not None:
-            cache_dir = cache["cache_path"].split(".")[0] + "_folder"
-            cache_key = make_cache_key(scenario_name, split_number, f'embeddings_path')
-            emb_cache_path = os.path.join(cache_dir, cache_key + ".pkl")
-        else:
-            emb_cache_path = None
+        emb_cache_path = make_cache_subpath(cache, scenario_name, split_number, f'embeddings_path')
 
         train_models_embeddings, test_models_embeddings = make_or_load_from_cache(
             object_name="train_test_model_embeddings",
@@ -345,14 +341,23 @@ def evaluate_scenarios(
                 "seen_items_dic": seen_items_dic
             },
             make_func=make_train_test_model_embeddings,
-            # load_func=default_pickle_load,
-            # save_func=default_pickle_save,
             cache_path=emb_cache_path,
-            # forward_cache_path=False,
-            # logger=None,
-            # unique_hash=None,
-            # verbose=False,
-            # check_gc=False,
+        )
+
+        fitted_weights_cache_path = make_cache_subpath(cache, scenario_name, split_number, f'fitted_weights_path')
+
+        fitted_weights = make_or_load_from_cache(
+            object_name="fitted_weights",
+            object_config={
+                "sampling_names": sampling_names,
+                "number_items": number_items,
+                "iterations": iterations,
+                "train_models_embeddings": train_models_embeddings,
+                "train_model_true_accs": train_model_true_accs,
+                "scenario": scenario
+            },
+            make_func=make_fitted_weights,
+            cache_path=fitted_weights_cache_path,
         )
 
         for j in tqdm(range(len(rows_to_hide))):
@@ -368,6 +373,7 @@ def evaluate_scenarios(
                     scores_test,
                     scores_train,
                     train_model_true_accs,
+                    fitted_weights,
                     responses_test,
                     train_models_embeddings,
                     test_models_embeddings,
@@ -459,3 +465,65 @@ def make_train_test_model_embeddings(
                     seen_items_dic[sampling_name][number_item][it]
                 )
     return train_models_embeddings, test_models_embeddings
+
+
+def make_fitted_weights(
+    config,
+    logger=None
+):
+    (
+        sampling_names,
+        number_items,
+        iterations,
+        train_models_embeddings,
+        train_model_true_accs,
+        scenario
+    ) = (
+        config["sampling_names"],
+        config["number_items"],
+        config["iterations"],
+        config["train_models_embeddings"],
+        config["train_model_true_accs"],
+        config["scenario"]
+    )
+
+    fitted_weights = {}
+    train_model_true_accs_np = np.array(
+        [
+            train_model_true_accs[i][scenario]
+                for i
+                    in range(len(train_model_true_accs))
+        ]
+    )
+    for sampling_name in sampling_names:
+        fitted_weights[sampling_name] = {}
+        for number_item in number_items:
+            fitted_weights[sampling_name][number_item] = {}
+            for it in range(iterations):
+
+                cur_train_models_embeddings_np = train_models_embeddings[sampling_name][number_item][it].numpy()
+                reg = LinearRegression().fit(
+                    cur_train_models_embeddings_np,
+                    train_model_true_accs_np
+                )
+
+                # Compute training RMSE
+                train_preds = reg.predict(cur_train_models_embeddings_np)
+                train_rmse = np.sqrt(np.mean((train_preds - train_model_true_accs_np) ** 2))
+                print(f"Training RMSE for {sampling_name} {number_item} {it}: {train_rmse}")
+
+                fitted_weights[sampling_name][number_item][it] = {
+                    'fitted_model': reg,
+                }
+
+    return fitted_weights
+
+
+def make_cache_subpath(cache, scenario_name, split_number, suffix):
+    if cache is not None:
+        cache_dir = cache["cache_path"].split(".")[0] + "_folder"
+        cache_key = make_cache_key(scenario_name, split_number, suffix)
+        cache_path = os.path.join(cache_dir, cache_key + ".pkl")
+    else:
+        cache_path = None
+    return cache_path

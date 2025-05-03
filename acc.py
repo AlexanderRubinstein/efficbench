@@ -17,7 +17,8 @@ ESTIMATORS = [
     'cirt',
     'gpirt',
     "mean_train_score", # [ADD][new estimator]
-    "KNN" # [ADD][new estimator]
+    "KNN", # [ADD][new estimator]
+    "fitted_weights" # [ADD][new estimator]
 ]
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
@@ -70,6 +71,7 @@ def calculate_accuracies(
     scores_test,
     scores_train,
     train_model_true_accs,
+    fitted_weights,
     responses_test,
     train_models_embeddings,
     test_models_embeddings,
@@ -151,14 +153,21 @@ def calculate_accuracies(
                         if len(accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario]) < iterations:
                             accs[rows_to_hide[j]][number_item]['mean_train_score'][scenario].append(mean_train_score) # does not depend on sampling type
 
+                        test_model_embedding = test_models_embeddings[sampling_name][number_item][it][j]
+
                         # [ADD][new estimator] KNN
                         knn_acc = compute_acc_knn(
-                            test_model_embedding=test_models_embeddings[sampling_name][number_item][it][j],
+                            test_model_embedding=test_model_embedding,
                             train_model_embeddings=train_models_embeddings[sampling_name][number_item][it],
                             scenario=scenario,
                             train_model_true_accs=train_model_true_accs
                         )
-                        accs[rows_to_hide[j]][number_item][sampling_name+'_KNN'][scenario].append(knn_acc)
+                        accs[rows_to_hide[j]][number_item][sampling_name + '_KNN'][scenario].append(knn_acc)
+
+                        # [ADD][new estimator] fitted weights
+                        fitted_model = fitted_weights[sampling_name][number_item][it]["fitted_model"]
+                        fitted_acc = fitted_model.predict(test_model_embedding.numpy().reshape(1, -1))[0]
+                        accs[rows_to_hide[j]][number_item][sampling_name + '_fitted_weights'][scenario].append(fitted_acc)
 
                         if not skip_irt:
                             data_part_pirt = ((balance_weights*scores_test[j])[[s for s in seen_items if s in scenarios_position[scenario]]]).mean()

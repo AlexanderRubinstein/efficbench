@@ -3,7 +3,12 @@ import copy
 import pandas as pd
 import argparse
 from scipy import stats
-from experiments import *
+import os
+# from experiments import *
+from experiments import (
+    evaluate_scenarios
+)
+from utils import lb_scenarios
 from utils import (
     # get_lambda,
     # SuppressPrints,
@@ -11,7 +16,7 @@ from utils import (
     # item_curve,
     # item_response_function,
     # prepare_data,
-    # dump_pickle,
+    dump_pickle,
     load_pickle,
     alpaca_scenarios,
     icl_templates_scenarios
