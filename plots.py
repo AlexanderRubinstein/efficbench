@@ -227,7 +227,8 @@ def make_perf_table(
                 sampling_name = "-"
                 prediction_name = method
             else:
-                sampling_name, prediction_name = method.split('_')
+                split = method.split('_')
+                sampling_name, prediction_name = split[0], "_".join(split[1:])
 
             if sampling_name not in dict_per_num_anchors.keys():
                 dict_per_num_anchors[sampling_name] = {}

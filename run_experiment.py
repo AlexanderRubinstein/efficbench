@@ -181,7 +181,7 @@ if __name__ == "__main__":
     parser.add_argument('--skip_irt', action='store_true', help='skip irt')
     parser.add_argument('--cache_path', type=str, help='cache path', default=None)
     parser.add_argument('--sampling_names', type=str, help='sampling names', default='random,anchor,anchor-irt')
-    parser.add_argument('--path_suffix', type=str, help='path suffix', default='')
+    parser.add_argument('--filename_suffix', type=str, help='path suffix', default='')
 
     args = parser.parse_args()
     bench = args.bench
@@ -235,11 +235,11 @@ if __name__ == "__main__":
     if args.cache_path is not None:
         dump_pickle(cache, args.cache_path)
 
-    path_suffix = args.path_suffix
+    filename_suffix = args.filename_suffix
 
-    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
-    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
-    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}{path_suffix}.pickle'
+    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
+    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
+    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
 
     with open(results_full_path, 'wb') as handle:
         pickle.dump(results_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
