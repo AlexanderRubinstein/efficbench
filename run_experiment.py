@@ -32,6 +32,12 @@ from plots import (
     load_scores,
     make_perf_table
 )
+from acc import (
+    ESTIMATORS,
+    FITTING_METHODS,
+    BASE_ESTIMATORS,
+    BEST_FITTING_METHODS
+)
 from generating_data.utils_for_notebooks import merge_methods
 from stnd.utility.utils import apply_random_seed
 
@@ -202,10 +208,22 @@ def main():
     parser.add_argument('--filename_suffix', type=str, help='path suffix', default='')
     parser.add_argument('--make_results_table', action='store_true', help='make results table')
     parser.add_argument('--results_table_path', type=str, help='results table path', default=None)
+    parser.add_argument('--estimators', type=str, help='estimators', default='naive,pirt,cirt,gpirt')
 
     apply_random_seed(RANDOM_SEED)
 
     args = parser.parse_args()
+
+    if args.estimators is None:
+        chosen_estimators = ESTIMATORS
+        chosen_fitting_methods = FITTING_METHODS
+    elif args.estimators == 'best':
+        chosen_fitting_methods = BEST_FITTING_METHODS
+        chosen_estimators = BASE_ESTIMATORS + [f[0] for f in BEST_FITTING_METHODS]
+    else:
+        estimators = args.estimators.split(',')
+        chosen_estimators = [e for e in ESTIMATORS if e in estimators or e in BASE_ESTIMATORS]
+        chosen_fitting_methods = [f for f in FITTING_METHODS if f[0] in estimators]
 
     if args.results_table_path is None and args.make_results_table:
         if args.cache_path is not None:
@@ -258,7 +276,9 @@ def main():
         sampling_names=sampling_names,
         num_workers=args.num_workers,
         skip_irt=args.skip_irt,
-        cache=cache
+        cache=cache,
+        chosen_estimators=chosen_estimators,
+        chosen_fitting_methods=chosen_fitting_methods
     )
 
     if args.cache_path is not None:

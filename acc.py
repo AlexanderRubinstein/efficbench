@@ -23,7 +23,7 @@ from plots import CONSTANT_ESTIMATORS
 import numpy as np
 from models import MLPRegressor
 
-ESTIMATORS = [
+BASE_ESTIMATORS = [
     'naive',
     'pirt',
     'cirt',
@@ -33,24 +33,31 @@ ESTIMATORS = [
     "KNN", # [ADD][new estimator]
 ]
 
+BEST_FITTING_METHODS = [
+    ('Ridge_10', (Ridge, {'alpha': 10})),
+    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
+    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
+    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+]
+
 FITTING_METHODS = [
-    # ('LinearRegression', (LinearRegression, {})),
-    # ('Ridge_01', (Ridge, {'alpha': 0.1})),
-    # ('Ridge_1', (Ridge, {'alpha': 1})),
-    ('Ridge_10', (Ridge, {'alpha': 10})), # best ridge
-    # ('Ridge_100', (Ridge, {'alpha': 100})),
-    # ('Ridge_1000', (Ridge, {'alpha': 1000})),
-    # ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
-    # ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
-    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})), # best lasso
-    # ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
-    # ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
-    # ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
-    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
-    # ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
-    # ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
-    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
-    # ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+    ('LinearRegression', (LinearRegression, {})),
+    ('Ridge_01', (Ridge, {'alpha': 0.1})),
+    ('Ridge_1', (Ridge, {'alpha': 1})),
+    # ('Ridge_10', (Ridge, {'alpha': 10})), # best ridge
+    ('Ridge_100', (Ridge, {'alpha': 100})),
+    ('Ridge_1000', (Ridge, {'alpha': 1000})),
+    ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
+    ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
+    # ('Lasso_e-4', (Lasso, {'alpha': 0.0001})), # best lasso
+    ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
+    ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
+    ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
+    # ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
+    ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
+    ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
+    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
+    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
     # MLP 2 layers
     ('MLP2_e50_lr0.001', (
         MLPRegressor, {
@@ -124,11 +131,15 @@ FITTING_METHODS = [
         }
     )),
 ]
+FITTING_METHODS = BEST_FITTING_METHODS + FITTING_METHODS
 
 
 # [ADD][new estimator]
+ESTIMATORS = []
 for model_name, builder in FITTING_METHODS:
-    ESTIMATORS.append(f"fitted-{model_name}")
+    # ESTIMATORS.append(f"fitted-{model_name}")
+    ESTIMATORS.append(model_name)
+ESTIMATORS = BASE_ESTIMATORS + ESTIMATORS
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
 
@@ -190,7 +201,8 @@ def calculate_accuracies(
     balance_weights,
     opt_lambds,
     rows_to_hide,
-    skip_irt=False
+    skip_irt=False,
+    chosen_estimators=None,
 ):
 
     # number_items = list(item_weights_dic[sampling_names[0]].keys())
@@ -204,7 +216,7 @@ def calculate_accuracies(
     accs = {rows_to_hide[j]: {}}
     for number_item in number_items:
         accs[rows_to_hide[j]][number_item] = {}
-        for est in ESTIMATORS:
+        for est in chosen_estimators:
             if skip_irt and est in ['pirt', 'cirt', 'gpirt']:
                 continue
             for sampling_name in sampling_names:

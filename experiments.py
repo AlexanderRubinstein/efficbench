@@ -60,7 +60,9 @@ def evaluate_scenarios(
     sampling_names=['random', 'anchor', 'anchor-irt'],
     num_workers=1,
     skip_irt=False,
-    cache=None
+    cache=None,
+    chosen_estimators=None,
+    chosen_fitting_methods=None
 ):
 
     """
@@ -389,7 +391,8 @@ def evaluate_scenarios(
                 "train_models_embeddings": train_models_embeddings,
                 "train_model_true_accs": train_model_true_accs,
                 "scenario": scenario,
-                "cache_path": fitted_weights_cache_path
+                "cache_path": fitted_weights_cache_path,
+                "chosen_fitting_methods": chosen_fitting_methods
             },
             make_func=make_fitted_weights,
             cache_path=fitted_weights_cache_path,
@@ -418,7 +421,8 @@ def evaluate_scenarios(
                     balance_weights,
                     opt_lambds,
                     rows_to_hide,
-                    skip_irt
+                    skip_irt,
+                    chosen_estimators,
                 )
             )
         elapsed_time = np.round(time.time()-start_time)
@@ -441,10 +445,10 @@ def evaluate_scenarios(
                     if skip_irt and sampling_name == 'anchor-irt':
                         continue
                     # for estimators in ['naive', 'pirt', 'cirt', 'gpirt']:
-                    for estimators in ESTIMATORS:
-                        if skip_irt and estimators in ['pirt', 'cirt', 'gpirt']:
+                    for estimator in chosen_estimators:
+                        if skip_irt and estimator in ['pirt', 'cirt', 'gpirt']:
                             continue
-                        method_name = make_method_name(sampling_name, estimators)
+                        method_name = make_method_name(sampling_name, estimator)
                         results[rows_to_hide[j]][number_item][method_name] = {}
                         for scenario in chosen_scenarios:
                             acc_hat = accs_hat[rows_to_hide[j]][number_item][
@@ -514,7 +518,8 @@ def make_fitted_weights(
         train_models_embeddings,
         train_model_true_accs,
         scenario,
-        cache_path
+        cache_path,
+        chosen_fitting_methods
     ) = (
         config["sampling_names"],
         config["number_items"],
@@ -522,7 +527,8 @@ def make_fitted_weights(
         config["train_models_embeddings"],
         config["train_model_true_accs"],
         config["scenario"],
-        config["cache_path"]
+        config["cache_path"],
+        config["chosen_fitting_methods"]
     )
 
     fitted_weights = {}
@@ -544,7 +550,7 @@ def make_fitted_weights(
 
                 fitted_weights[sampling_name][number_item][it] = {}
 
-                for model_name, builder in FITTING_METHODS:
+                for model_name, builder in chosen_fitting_methods:
 
                     if cache_path is not None:
                         cache_dir = cache_path.split(".")[0] + "_folder"
@@ -566,7 +572,7 @@ def make_fitted_weights(
                         cache_path=cache_dir,
                     )
 
-                    fitted_weights[sampling_name][number_item][it][f'fitted-{model_name}'] = fitted_model
+                    fitted_weights[sampling_name][number_item][it][f'{model_name}'] = fitted_model
 
     return fitted_weights
 
@@ -608,7 +614,7 @@ def make_fitted_model(
     model = builder_func(**builder_kwargs)
     if sampling_name in ["high-disagreement", "low-disagreement"] and '@' not in sampling_name and it > 0:
         # for deterministic sampling fitted model does not change for different runs
-        fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}'])
+        fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'{model_name}'])
     else:
         fitted_model = model.fit(
             cur_train_models_embeddings_np,
