@@ -198,6 +198,7 @@ def main():
     parser.add_argument('--sampling_names', type=str, help='sampling names', default='random,anchor,anchor-irt')
     parser.add_argument('--filename_suffix', type=str, help='path suffix', default='')
     parser.add_argument('--make_results_table', action='store_true', help='make results table')
+    parser.add_argument('--results_table_path', type=str, help='results table path', default='df_100.csv')
 
     apply_random_seed(RANDOM_SEED)
 
@@ -276,7 +277,7 @@ def main():
             accs_full,
             scenarios_to_skip=SCENARIOS_TO_SKIP
         )
-        make_results_table(table_avg, table_std, bench)
+        make_results_table(table_avg, table_std, bench, args.results_table_path)
 
 
 def make_table_avg(bench, split, filename_suffix, accs_full, scenarios_to_skip):
@@ -396,7 +397,7 @@ def make_table_avg(bench, split, filename_suffix, accs_full, scenarios_to_skip):
     return table_avg, table_std
 
 
-def make_results_table(table_avg, table_std, bench):
+def make_results_table(table_avg, table_std, bench, results_table_path):
 
     agg = 'leaderboard' # 'leaderboard', 'scenarios'
     results = 'acc'# 'acc', 'rank'
@@ -459,7 +460,7 @@ def make_results_table(table_avg, table_std, bench):
 
             print(df[num_samples])
 
-    df[max(list(df.keys()))].to_csv('df_100.csv')
+    df[max(list(df.keys()))].to_csv(results_table_path)
 
 if __name__ == "__main__":
     main()
