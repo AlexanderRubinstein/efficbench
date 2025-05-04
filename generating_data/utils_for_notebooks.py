@@ -111,3 +111,12 @@ def compare_dicts_with_arrays(d1, d2, prefix=""):
                 print(error_str)
                 return False
     return True
+
+
+def merge_methods(table_avg, table_avg_reproduced):
+    for bench in table_avg.keys():
+        for split in table_avg[bench].keys():
+            for method in table_avg_reproduced[bench][split].keys():
+                if method not in table_avg[bench][split].keys():
+                    table_avg[bench][split][method] = table_avg_reproduced[bench][split][method]
+    return table_avg

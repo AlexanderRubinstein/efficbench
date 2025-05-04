@@ -31,8 +31,9 @@
                 "random,high-disagreement+nonstratified",
                 // "random,high-disagreement",
                 "--filename_suffix",
-                "_disagreement_debug"
+                "_disagreement_debug",
                 // "_reproduced"
+                "--make_results_table"
             ],
             "console": "integratedTerminal",
         },
