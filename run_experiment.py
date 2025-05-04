@@ -124,8 +124,11 @@ def get_data(bench, split):
     # Loading data
     elif bench == 'mmlu_fields':
 
+        mmlu_fields_path = 'data/mmlu_fields_ordered.pickle' # ordered by date in ./generate_plots.ipynb
+        # mmlu_fields_path = 'data/mmlu_fields.pickle'
+
         #data
-        with open('data/mmlu_fields.pickle', 'rb') as handle:
+        with open(mmlu_fields_path, 'rb') as handle:
             data = pickle.load(handle)
 
         #scenarios
