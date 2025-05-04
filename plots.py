@@ -243,6 +243,21 @@ def make_perf_table(
 
             dict_per_num_anchors[sampling_name][prediction_name] = estimation_error
 
+            if "disagreement" in sampling_name:
+                if "@" in sampling_name:
+                    n_guiding_models = int(sampling_name.split("@")[1].split("+")[0])
+                    dict_per_num_anchors[sampling_name]["#guiding_models"] = n_guiding_models
+                else:
+                    dict_per_num_anchors[sampling_name]["#guiding_models"] = "all"
+                if "high" in sampling_name:
+                    dict_per_num_anchors[sampling_name]["PDS type"] = "highest"
+                else:
+                    dict_per_num_anchors[sampling_name]["PDS type"] = "lowest"
+                if "+nonstratified" in sampling_name:
+                    dict_per_num_anchors[sampling_name]["stratified"] = False
+                else:
+                    dict_per_num_anchors[sampling_name]["stratified"] = True
+
     return {num_samples: pd.DataFrame(df_dict[num_samples]).T for num_samples in df_dict.keys()}
 
 

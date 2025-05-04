@@ -606,7 +606,7 @@ def make_fitted_model(
     )
     builder_func, builder_kwargs = builder
     model = builder_func(**builder_kwargs)
-    if sampling_name in ["high-disagreement", "low-disagreement"] and it > 0:
+    if sampling_name in ["high-disagreement", "low-disagreement"] and '@' not in sampling_name and it > 0:
         # for deterministic sampling fitted model does not change for different runs
         fitted_model = deepcopy(fitted_weights[sampling_name][number_item][0][f'fitted-{model_name}'])
     else:
