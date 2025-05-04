@@ -265,7 +265,7 @@ def winrate(x,axis):
     n = x.shape[axis]
     return(np.argsort(np.argsort(x, axis=axis), axis=axis)/n)
 
-def load_scores(bench, split, scenarios_to_skip=[]):
+def load_scores(bench, split, scenarios_to_skip=[], ordered=False):
     with open(f'results/accs_{bench}_split-{split}_iterations-5.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
@@ -276,7 +276,8 @@ def load_scores(bench, split, scenarios_to_skip=[]):
         with open(f'data/alpaca_v2.pickle', 'rb') as handle:
             data2 = pickle.load(handle)
     else:
-        with open(f'data/{bench}.pickle', 'rb') as handle:
+        data2_path = f'data/{bench}.pickle' if not ordered else f'data/{bench}_ordered.pickle'
+        with open(data2_path, 'rb') as handle:
             data2 = pickle.load(handle)
     if bench=='lb':scenarios = lb_scenarios
     elif bench=='mmlu':scenarios = {'mmlu':lb_scenarios['mmlu']}

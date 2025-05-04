@@ -356,7 +356,7 @@ def make_table_avg(bench, split, filename_suffix, accs_full, scenarios_to_skip):
     scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
 
     data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
-    scores = load_scores(bench, split, scenarios_to_skip=scenarios_to_skip)
+    scores = load_scores(bench, split, scenarios_to_skip=scenarios_to_skip, ordered=True)
 
     if agg == 'leaderboard':
         if bench=='helm':
