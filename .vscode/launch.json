@@ -36,7 +36,8 @@
                 "--make_results_table",
                 "--estimators",
                 // "Ridge_10,MLP2_e200_lr0.001"
-                "best"
+                // "best"
+                "mlp"
             ],
             "console": "integratedTerminal",
         },

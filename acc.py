@@ -33,31 +33,8 @@ BASE_ESTIMATORS = [
     "KNN", # [ADD][new estimator]
 ]
 
-BEST_FITTING_METHODS = [
-    ('Ridge_10', (Ridge, {'alpha': 10})),
-    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
-    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
-    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
-]
-
-FITTING_METHODS = [
-    ('LinearRegression', (LinearRegression, {})),
-    ('Ridge_01', (Ridge, {'alpha': 0.1})),
-    ('Ridge_1', (Ridge, {'alpha': 1})),
-    # ('Ridge_10', (Ridge, {'alpha': 10})), # best ridge
-    ('Ridge_100', (Ridge, {'alpha': 100})),
-    ('Ridge_1000', (Ridge, {'alpha': 1000})),
-    ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
-    ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
-    # ('Lasso_e-4', (Lasso, {'alpha': 0.0001})), # best lasso
-    ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
-    ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
-    ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
-    # ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
-    ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
-    ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
-    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
-    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+BEST_MLP_FITTING_METHODS = []
+MLP_FITTING_METHODS = [
     # MLP 2 layers
     ('MLP2_e50_lr0.001', (
         MLPRegressor, {
@@ -131,7 +108,36 @@ FITTING_METHODS = [
         }
     )),
 ]
-FITTING_METHODS = BEST_FITTING_METHODS + FITTING_METHODS
+MLP_FITTING_METHODS = BEST_MLP_FITTING_METHODS + MLP_FITTING_METHODS
+
+BEST_FITTING_METHODS = [
+    ('Ridge_10', (Ridge, {'alpha': 10})),
+    ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
+    ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
+    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+]
+BEST_FITTING_METHODS = BEST_MLP_FITTING_METHODS + BEST_FITTING_METHODS
+
+FITTING_METHODS = [
+    ('LinearRegression', (LinearRegression, {})),
+    ('Ridge_01', (Ridge, {'alpha': 0.1})),
+    ('Ridge_1', (Ridge, {'alpha': 1})),
+    # ('Ridge_10', (Ridge, {'alpha': 10})), # best ridge
+    ('Ridge_100', (Ridge, {'alpha': 100})),
+    ('Ridge_1000', (Ridge, {'alpha': 1000})),
+    ('Lasso_5e-6', (Lasso, {'alpha': 0.000005})),
+    ('Lasso_e-5', (Lasso, {'alpha': 0.00001})),
+    # ('Lasso_e-4', (Lasso, {'alpha': 0.0001})), # best lasso
+    ('Lasso_e-3', (Lasso, {'alpha': 0.001})),
+    ('Lasso_e-2', (Lasso, {'alpha': 0.01})),
+    ('RandomForestRegressor_50', (RandomForestRegressor, {'n_estimators': 50})),
+    # ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
+    ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
+    ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
+    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
+    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+]
+FITTING_METHODS = BEST_FITTING_METHODS + MLP_FITTING_METHODS + FITTING_METHODS
 
 
 # [ADD][new estimator]
@@ -140,6 +146,7 @@ for model_name, builder in FITTING_METHODS:
     # ESTIMATORS.append(f"fitted-{model_name}")
     ESTIMATORS.append(model_name)
 ESTIMATORS = BASE_ESTIMATORS + ESTIMATORS
+assert len(ESTIMATORS) == len(set(ESTIMATORS)), "Estimators are not unique"
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
 

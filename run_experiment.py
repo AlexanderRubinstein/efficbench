@@ -36,7 +36,8 @@ from acc import (
     ESTIMATORS,
     FITTING_METHODS,
     BASE_ESTIMATORS,
-    BEST_FITTING_METHODS
+    BEST_FITTING_METHODS,
+    MLP_FITTING_METHODS
 )
 from generating_data.utils_for_notebooks import merge_methods
 from stnd.utility.utils import apply_random_seed
@@ -220,6 +221,9 @@ def main():
     elif args.estimators == 'best':
         chosen_fitting_methods = BEST_FITTING_METHODS
         chosen_estimators = BASE_ESTIMATORS + [f[0] for f in BEST_FITTING_METHODS]
+    elif args.estimators == 'mlp':
+        chosen_fitting_methods = MLP_FITTING_METHODS
+        chosen_estimators = BASE_ESTIMATORS + [f[0] for f in MLP_FITTING_METHODS]
     else:
         estimators = args.estimators.split(',')
         chosen_estimators = [e for e in ESTIMATORS if e in estimators or e in BASE_ESTIMATORS]
