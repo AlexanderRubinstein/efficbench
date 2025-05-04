@@ -181,13 +181,13 @@ MLP_FITTING_METHODS = [
 ]
 MLP_FITTING_METHODS = BEST_MLP_FITTING_METHODS + MLP_FITTING_METHODS
 
-BEST_FITTING_METHODS = [
+BEST_LINEAR_METHODS = [
     ('Ridge_10', (Ridge, {'alpha': 10})),
     ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
     ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
     ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
 ]
-BEST_FITTING_METHODS = BEST_MLP_FITTING_METHODS + BEST_FITTING_METHODS
+BEST_FITTING_METHODS = BEST_MLP_FITTING_METHODS + BEST_LINEAR_METHODS
 
 FITTING_METHODS = [
     ('LinearRegression', (LinearRegression, {})),
@@ -208,7 +208,7 @@ FITTING_METHODS = [
     # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
     ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
 ]
-FITTING_METHODS = BEST_FITTING_METHODS + MLP_FITTING_METHODS + FITTING_METHODS
+FITTING_METHODS = BEST_LINEAR_METHODS + MLP_FITTING_METHODS + FITTING_METHODS
 
 
 # [ADD][new estimator]
@@ -218,6 +218,20 @@ for model_name, builder in FITTING_METHODS:
     ESTIMATORS.append(model_name)
 ESTIMATORS = BASE_ESTIMATORS + ESTIMATORS
 assert len(ESTIMATORS) == len(set(ESTIMATORS)), "Estimators are not unique"
+
+
+def find_duplicates(lst):
+    # Find and print any duplicate estimators
+    seen = set()
+    duplicates = []
+    for est in lst:
+        if est in seen:
+            duplicates.append(est)
+        else:
+            seen.add(est)
+    if duplicates:
+        print(f"Found duplicate estimators: {duplicates}")
+
 
 def compute_acc_pirt(data_part, scenario, scenarios_position, seen_items, unseen_items, A, B, theta, balance_weights, thresh=None):
 
