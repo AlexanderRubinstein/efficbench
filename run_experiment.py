@@ -202,13 +202,14 @@ def main():
 
     apply_random_seed(RANDOM_SEED)
 
+    args = parser.parse_args()
+
     if args.results_table_path is None and args.make_results_table:
         if args.cache_path is not None:
             args.results_table_path = args.cache_path.replace('.pickle', '.csv')
         else:
             args.results_table_path = f'default_df_run_experiment.csv'
 
-    args = parser.parse_args()
     bench = args.bench
     split = args.split
     iterations = args.iterations
