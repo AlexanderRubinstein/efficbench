@@ -198,9 +198,15 @@ def main():
     parser.add_argument('--sampling_names', type=str, help='sampling names', default='random,anchor,anchor-irt')
     parser.add_argument('--filename_suffix', type=str, help='path suffix', default='')
     parser.add_argument('--make_results_table', action='store_true', help='make results table')
-    parser.add_argument('--results_table_path', type=str, help='results table path', default='df_100.csv')
+    parser.add_argument('--results_table_path', type=str, help='results table path', default=None)
 
     apply_random_seed(RANDOM_SEED)
+
+    if args.results_table_path is None and args.make_results_table:
+        if args.cache_path is not None:
+            args.results_table_path = args.cache_path.replace('.pickle', '.csv')
+        else:
+            args.results_table_path = f'default_df_run_experiment.csv'
 
     args = parser.parse_args()
     bench = args.bench
