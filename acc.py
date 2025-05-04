@@ -21,6 +21,7 @@ from sklearn.ensemble import (
 )
 from plots import CONSTANT_ESTIMATORS
 import numpy as np
+from models import MLPRegressor
 
 ESTIMATORS = [
     'naive',
@@ -50,7 +51,80 @@ FITTING_METHODS = [
     # ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
     ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
     # ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+    # MLP 2 layers
+    ('MLP2_e50_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 1],
+            'n_epochs': 50,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP2_e100_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 1],
+            'n_epochs': 100,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP2_e200_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 1],
+            'n_epochs': 200,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP2_e100_lr0.01', (
+        MLPRegressor, {
+            'hidden_channels': [128, 1],
+            'n_epochs': 100,
+            'lr': 0.01,
+        }
+    )),
+    ('MLP2_e100_lr0.0001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 1],
+            'n_epochs': 100,
+            'lr': 0.0001,
+        }
+    )),
+    # MLP 3 layers
+    ('MLP3_e50_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 50,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e100_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 100,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e200_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 200,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e100_lr0.01', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 100,
+            'lr': 0.01,
+        }
+    )),
+    ('MLP3_e100_lr0.0001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 100,
+            'lr': 0.0001,
+        }
+    )),
 ]
+
 
 # [ADD][new estimator]
 for model_name, builder in FITTING_METHODS:

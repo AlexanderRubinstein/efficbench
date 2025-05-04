@@ -3,3 +3,4 @@ py-irt
 jsonlines
 matplotlib
 datasets # for downloading data
+torchvision # for MLP
