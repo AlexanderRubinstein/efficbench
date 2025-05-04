@@ -225,7 +225,8 @@ def main():
         chosen_fitting_methods = MLP_FITTING_METHODS
         chosen_estimators = BASE_ESTIMATORS + [f[0] for f in MLP_FITTING_METHODS]
     else:
-        estimators = args.estimators.split(',')
+        assert isinstance(args.estimators, str), "estimators must be a string"
+        estimators = args.estimators.replace('__COMMA__', ',').split(',')
         chosen_estimators = [e for e in ESTIMATORS if e in estimators or e in BASE_ESTIMATORS]
         chosen_fitting_methods = [f for f in FITTING_METHODS if f[0] in estimators]
 

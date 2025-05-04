@@ -93,6 +93,48 @@ MLP_FITTING_METHODS = [
             'lr': 0.001,
         }
     )),
+    ('MLP3_e200_lr0.0001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 200,
+            'lr': 0.0001,
+        }
+    )),
+    ('MLP3_e300_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 300,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e400_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 400,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e500_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 500,
+            'lr': 0.001,
+        }
+    )),
+    ('MLP3_e500_lr0.0001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 400,
+            'lr': 0.0001,
+        }
+    )),
+    ('MLP3_e600_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 600,
+            'lr': 0.001,
+        }
+    )),
     ('MLP3_e100_lr0.01', (
         MLPRegressor, {
             'hidden_channels': [128, 128, 1],
