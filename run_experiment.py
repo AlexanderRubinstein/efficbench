@@ -215,7 +215,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.estimators is None:
+    if args.estimators is None or args.estimators == 'all':
         chosen_estimators = ESTIMATORS
         chosen_fitting_methods = FITTING_METHODS
     elif args.estimators == 'best':
@@ -310,9 +310,15 @@ def main():
             split,
             filename_suffix,
             accs_full,
-            scenarios_to_skip=SCENARIOS_TO_SKIP
+            scenarios_to_skip=SCENARIOS_TO_SKIP,
         )
-        make_results_table(table_avg, table_std, bench, args.results_table_path)
+        make_results_table(
+            table_avg,
+            table_std,
+            bench,
+            args.results_table_path,
+            split
+        )
 
 
 def make_table_avg(bench, split, filename_suffix, accs_full, scenarios_to_skip):
@@ -432,7 +438,7 @@ def make_table_avg(bench, split, filename_suffix, accs_full, scenarios_to_skip):
     return table_avg, table_std
 
 
-def make_results_table(table_avg, table_std, bench, results_table_path):
+def make_results_table(table_avg, table_std, bench, results_table_path, split):
 
     agg = 'leaderboard' # 'leaderboard', 'scenarios'
     results = 'acc'# 'acc', 'rank'
@@ -454,46 +460,34 @@ def make_results_table(table_avg, table_std, bench, results_table_path):
         else: ylim = (.5,1)
     else: raise NotImplementedError
 
+    cur_methods_for_table = table_avg["mmlu_fields"][split].keys()
 
-    cur_methods = table_avg["mmlu_fields"]["iid"].keys()
-    cur_methods = [method for method in cur_methods if method not in ['random_pirt', 'anchor_pirt', 'random_cirt', 'anchor_cirt', "anchor-irt_cirt", "anchor-irt_pirt"]]
-    cur_methods = [method for method in cur_methods if method not in ["anchor_gpirt", "random_gpirt", "anchor_naive", "random_naive", "anchor-irt_naive"]]
+    df = make_perf_table(
+        table_avg[bench][split],
+        table_std[bench][split],
+        methods=cur_methods_for_table,
+    )
 
-    cur_methods_for_table = table_avg["mmlu_fields"]["iid"].keys()
+    pd.set_option('display.max_rows', MAX_TABLE_SIZE)
+    pd.set_option('display.max_columns', MAX_TABLE_SIZE)
+    pd.set_option(
+        "display.max_colwidth", MAX_TABLE_SIZE
+    )
+    for num_samples in df.keys():
+        print("#anchor_points:", num_samples)
+        # Reorder columns to put guiding models, PDS type, and stratified first
+        cols = df[num_samples].columns.tolist()
+        first_cols = ['#guiding_models', 'PDS type', 'stratified']
+        other_cols = [col for col in cols if col not in first_cols]
+        df[num_samples] = df[num_samples][first_cols + other_cols]
 
-    # Iterate over your benchmarks
-    for i, split in enumerate(splits[bench]):  # Replace `benchmarks` with your list of benchmarks
+        # Replace all values in #guiding_models column with 382
+        df[num_samples].loc[df[num_samples]['#guiding_models'] == 'all', '#guiding_models'] = 382
 
-        if split == 'noniid':
-            print("DEBUG: skipping noniid for now")
-            continue
+        # Sort rows by #guiding_models
+        df[num_samples] = df[num_samples].sort_values(['PDS type', 'stratified', '#guiding_models'])
 
-        df = make_perf_table(
-            table_avg[bench][split],
-            table_std[bench][split],
-            methods=cur_methods_for_table,
-        )
-
-        pd.set_option('display.max_rows', MAX_TABLE_SIZE)
-        pd.set_option('display.max_columns', MAX_TABLE_SIZE)
-        pd.set_option(
-            "display.max_colwidth", MAX_TABLE_SIZE
-        )
-        for num_samples in df.keys():
-            print("#anchor_points:", num_samples)
-            # Reorder columns to put guiding models, PDS type, and stratified first
-            cols = df[num_samples].columns.tolist()
-            first_cols = ['#guiding_models', 'PDS type', 'stratified']
-            other_cols = [col for col in cols if col not in first_cols]
-            df[num_samples] = df[num_samples][first_cols + other_cols]
-
-            # Replace all values in #guiding_models column with 382
-            df[num_samples].loc[df[num_samples]['#guiding_models'] == 'all', '#guiding_models'] = 382
-
-            # Sort rows by #guiding_models
-            df[num_samples] = df[num_samples].sort_values(['PDS type', 'stratified', '#guiding_models'])
-
-            print(df[num_samples])
+        print(df[num_samples])
 
     df[max(list(df.keys()))].to_csv(results_table_path)
 

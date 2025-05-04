@@ -72,6 +72,36 @@
                 "./data/leaderboard_raw_25042025.pickle"
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Experiment debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run_experiment.py",
+            "args": [
+                "--bench",
+                "mmlu_fields",
+                "--cache_path",
+                "/weka/oh/arubinstein17/github/efficbench/cache/mmlu_fields_iid_5_cuda_03052025_gsheetBest_noniid.pickle",
+                "--device",
+                "cuda",
+                "--estimators",
+                "best",
+                // "Ridge_10",
+                "--filename_suffix",
+                "_disagreement",
+                "--iterations",
+                "5",
+                "--num_workers",
+                "4",
+                "--sampling_names",
+                "random,high-disagreement,low-disagreement,low-disagreement@2,high-disagreement@2,low-disagreement@10,high-disagreement@10,low-disagreement@100,high-disagreement@100,high-disagreement+nonstratified,low-disagreement+nonstratified,low-disagreement@2+nonstratified,high-disagreement@2+nonstratified,low-disagreement@10+nonstratified,high-disagreement@10+nonstratified,low-disagreement@100+nonstratified,high-disagreement@100+nonstratified",
+                "--split",
+                "noniid",
+                "--skip_irt",
+                "--make_results_table"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }
