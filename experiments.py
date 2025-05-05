@@ -5,6 +5,7 @@ import multiprocessing as mp
 import time
 import os
 from copy import deepcopy
+import umap
 # from irt import *
 # from selection import *
 from irt import (
@@ -40,6 +41,11 @@ from utils_from_stuned import (
 from generating_data.utils_for_notebooks import compare_dicts_with_arrays
 import numpy as np
 import torch
+from sklearn.decomposition import PCA
+from stnd.utility.utils import optionally_make_dir
+
+
+RANDOM_SEED = 42
 
 
 def make_cache_key(scenario_name, split_number, suffix):
@@ -62,7 +68,8 @@ def evaluate_scenarios(
     skip_irt=False,
     cache=None,
     chosen_estimators=None,
-    chosen_fitting_methods=None
+    chosen_fitting_methods=None,
+    pca=None
 ):
 
     """
@@ -86,6 +93,9 @@ def evaluate_scenarios(
     assert any([s in ['random', 'anchor', 'anchor-irt', 'adaptive', 'high-disagreement', 'low-disagreement'] for s in sampling_names]) # [ADD][new sampling]
 
     number_items = [10, 30, 60, 100]  # Number of items to consider in evaluations
+
+    if cache is not None:
+        optionally_make_dir(os.path.dirname(cache["cache_path"]))
 
     # cpu = mp.cpu_count()  # Number of available CPU cores
     cpu = num_workers
@@ -374,7 +384,8 @@ def evaluate_scenarios(
                 "predictions_train": predictions_train,
                 "seen_items_dic": seen_items_dic,
                 "predictions_test": predictions_test,
-                "seen_items_dic": seen_items_dic
+                "seen_items_dic": seen_items_dic,
+                "pca": pca
             },
             make_func=make_train_test_model_embeddings,
             cache_path=emb_cache_path,
@@ -462,8 +473,29 @@ def evaluate_scenarios(
     return results, accs_hat, sampling_time_dic # Return the updated results dictionary
 
 
-def compute_embedding(predictions, anchor_indices):
-    return torch.Tensor(predictions)[:, anchor_indices, :].softmax(dim=-1).reshape(predictions.shape[0], -1)
+def compute_embedding(predictions, anchor_indices, pca, train_emb_unreduced=None):
+    emb_unreduced = torch.Tensor(predictions)[:, anchor_indices, :].softmax(dim=-1).reshape(predictions.shape[0], -1)
+    if pca is not None:
+        if train_emb_unreduced is not None:
+            emb = torch.cat([train_emb_unreduced, emb_unreduced], axis=0)
+        else:
+            emb = emb_unreduced
+        # TODO(Alex | 05.05.2025): use umap here
+        # emb = umap.UMAP(
+        #     n_components=pca,
+        #     random_state=RANDOM_SEED
+        # ).fit_transform(emb)
+        emb = PCA(
+            n_components=pca,
+            svd_solver='full',
+            random_state=RANDOM_SEED
+        ).fit_transform(emb.numpy())
+        emb = torch.Tensor(emb)
+        if train_emb_unreduced is not None:
+            emb = emb[len(train_emb_unreduced):]
+    else:
+        emb = emb_unreduced
+    return emb, emb_unreduced
 
 
 def make_train_test_model_embeddings(
@@ -477,7 +509,8 @@ def make_train_test_model_embeddings(
         predictions_train,
         seen_items_dic,
         predictions_test,
-        seen_items_dic
+        seen_items_dic,
+        pca
     ) = (
         emb_config["sampling_names"],
         emb_config["number_items"],
@@ -485,24 +518,29 @@ def make_train_test_model_embeddings(
         emb_config["predictions_train"],
         emb_config["seen_items_dic"],
         emb_config["predictions_test"],
-        emb_config["seen_items_dic"]
+        emb_config["seen_items_dic"],
+        emb_config["pca"]
     )
     train_models_embeddings = {}
     test_models_embeddings = {}
-    for sampling_name in sampling_names:
+    for sampling_name in tqdm(sampling_names, desc="Computing embeddings"):
         train_models_embeddings[sampling_name] = {}
         test_models_embeddings[sampling_name] = {}
         for number_item in number_items:
             train_models_embeddings[sampling_name][number_item] = {}
             test_models_embeddings[sampling_name][number_item] = {}
             for it in range(iterations):
-                train_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                train_models_embeddings[sampling_name][number_item][it], train_emb_unreduced = compute_embedding(
                     predictions_train,
-                    seen_items_dic[sampling_name][number_item][it]
+                    seen_items_dic[sampling_name][number_item][it],
+                    pca,
+                    None
                 )
-                test_models_embeddings[sampling_name][number_item][it] = compute_embedding(
+                test_models_embeddings[sampling_name][number_item][it], _ = compute_embedding(
                     predictions_test,
-                    seen_items_dic[sampling_name][number_item][it]
+                    seen_items_dic[sampling_name][number_item][it],
+                    pca,
+                    train_emb_unreduced
                 )
     return train_models_embeddings, test_models_embeddings
 

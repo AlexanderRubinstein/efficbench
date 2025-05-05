@@ -7,6 +7,7 @@ import os
 import numpy as np
 # from experiments import *
 from experiments import (
+    RANDOM_SEED,
     evaluate_scenarios
 )
 from utils import (
@@ -45,7 +46,6 @@ from stnd.utility.utils import apply_random_seed
 
 SCENARIOS_TO_SKIP = ['harness_gsm8k_5']
 MAX_TABLE_SIZE = 1000
-RANDOM_SEED = 42
 
 def get_data(bench, split):
     # Loading data
@@ -210,6 +210,7 @@ def main():
     parser.add_argument('--make_results_table', action='store_true', help='make results table')
     parser.add_argument('--results_table_path', type=str, help='results table path', default=None)
     parser.add_argument('--estimators', type=str, help='estimators', default='naive,pirt,cirt,gpirt')
+    parser.add_argument('--pca', type=int, help='pca', default=None)
 
     apply_random_seed(RANDOM_SEED)
 
@@ -283,7 +284,8 @@ def main():
         skip_irt=args.skip_irt,
         cache=cache,
         chosen_estimators=chosen_estimators,
-        chosen_fitting_methods=chosen_fitting_methods
+        chosen_fitting_methods=chosen_fitting_methods,
+        pca=args.pca
     )
 
     if args.cache_path is not None:

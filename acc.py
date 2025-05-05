@@ -34,10 +34,10 @@ BASE_ESTIMATORS = [
 ]
 
 BEST_MLP_FITTING_METHODS = [
-    ('MLP3_e600_lr0.001', (
+    ('MLP3_e700_lr0.001', (
         MLPRegressor, {
             'hidden_channels': [128, 128, 1],
-            'n_epochs': 600,
+            'n_epochs': 700,
             'lr': 0.001,
         }
     )),
@@ -136,13 +136,13 @@ MLP_FITTING_METHODS = [
             'lr': 0.0001,
         }
     )),
-    # ('MLP3_e600_lr0.001', (
-    #     MLPRegressor, {
-    #         'hidden_channels': [128, 128, 1],
-    #         'n_epochs': 600,
-    #         'lr': 0.001,
-    #     }
-    # )),
+    ('MLP3_e600_lr0.001', (
+        MLPRegressor, {
+            'hidden_channels': [128, 128, 1],
+            'n_epochs': 600,
+            'lr': 0.001,
+        }
+    )),
     ('MLP3_e600_lr0.0001', (
         MLPRegressor, {
             'hidden_channels': [128, 128, 1],
@@ -150,13 +150,13 @@ MLP_FITTING_METHODS = [
             'lr': 0.0001,
         }
     )),
-    ('MLP3_e700_lr0.001', (
-        MLPRegressor, {
-            'hidden_channels': [128, 128, 1],
-            'n_epochs': 700,
-            'lr': 0.001,
-        }
-    )),
+    # ('MLP3_e700_lr0.001', (
+    #     MLPRegressor, {
+    #         'hidden_channels': [128, 128, 1],
+    #         'n_epochs': 700,
+    #         'lr': 0.001,
+    #     }
+    # )),
     ('MLP3_e800_lr0.001', (
         MLPRegressor, {
             'hidden_channels': [128, 128, 1],
@@ -185,7 +185,8 @@ BEST_LINEAR_METHODS = [
     ('Ridge_10', (Ridge, {'alpha': 10})),
     ('Lasso_e-4', (Lasso, {'alpha': 0.0001})),
     ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})),
-    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
 ]
 BEST_FITTING_METHODS = BEST_MLP_FITTING_METHODS + BEST_LINEAR_METHODS
 
@@ -205,8 +206,9 @@ FITTING_METHODS = [
     # ('RandomForestRegressor_100', (RandomForestRegressor, {'n_estimators': 100})), # best random forest
     ('RandomForestRegressor_200', (RandomForestRegressor, {'n_estimators': 200})),
     ('GradientBoostingRegressor_50', (GradientBoostingRegressor, {'n_estimators': 50})),
-    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})), # best gradient boosting
-    ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
+    # ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+    ('GradientBoostingRegressor_100', (GradientBoostingRegressor, {'n_estimators': 100})),
+    # ('GradientBoostingRegressor_200', (GradientBoostingRegressor, {'n_estimators': 200})),
 ]
 FITTING_METHODS = BEST_LINEAR_METHODS + MLP_FITTING_METHODS + FITTING_METHODS
 

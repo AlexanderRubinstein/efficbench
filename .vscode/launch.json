@@ -34,12 +34,14 @@
                 "--filename_suffix",
                 "_disagreement_debug",
                 // "_reproduced"
+                "--pca",
+                "128",
                 "--make_results_table",
                 "--estimators",
                 // "Ridge_10,MLP2_e200_lr0.001"
-                // "best"
+                "best"
                 // "mlp"
-                "MLP3_e200_lr0.001__COMMA__MLP3_e300_lr0.001__COMMA__MLP3_e400_lr0.001__COMMA__MLP3_e200_lr0.0001__COMMA__MLP3_e500_lr0.001__COMMA__MLP3_e500_lr0.0001__COMMA__MLP3_e600_lr0.001"
+                // "MLP3_e200_lr0.001__COMMA__MLP3_e300_lr0.001__COMMA__MLP3_e400_lr0.001__COMMA__MLP3_e200_lr0.0001__COMMA__MLP3_e500_lr0.001__COMMA__MLP3_e500_lr0.0001__COMMA__MLP3_e600_lr0.001"
             ],
             "console": "integratedTerminal",
         },
