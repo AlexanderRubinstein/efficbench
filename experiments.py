@@ -473,29 +473,40 @@ def evaluate_scenarios(
     return results, accs_hat, sampling_time_dic # Return the updated results dictionary
 
 
-def compute_embedding(predictions, anchor_indices, pca, train_emb_unreduced=None):
+def compute_embedding(predictions, anchor_indices, pca, transform=None):
     emb_unreduced = torch.Tensor(predictions)[:, anchor_indices, :].softmax(dim=-1).reshape(predictions.shape[0], -1)
+    if transform is not None:
+        assert pca is not None
     if pca is not None:
-        if train_emb_unreduced is not None:
-            emb = torch.cat([train_emb_unreduced, emb_unreduced], axis=0)
-        else:
-            emb = emb_unreduced
+        # if train_emb_unreduced is not None:
+        #     emb = torch.cat([train_emb_unreduced, emb_unreduced], axis=0)
+        # else:
+        #     emb = emb_unreduced
         # TODO(Alex | 05.05.2025): use umap here
         # emb = umap.UMAP(
         #     n_components=pca,
         #     random_state=RANDOM_SEED
         # ).fit_transform(emb)
-        emb = PCA(
-            n_components=pca,
-            svd_solver='full',
-            random_state=RANDOM_SEED
-        ).fit_transform(emb.numpy())
+        if transform is None:
+            if pca < 0:
+                transform = umap.UMAP(
+                    n_components=(-pca),
+                    random_state=RANDOM_SEED
+                ).fit(emb_unreduced.numpy())
+            else:
+                transform = PCA(
+                    n_components=pca,
+                    svd_solver='full',
+                    random_state=RANDOM_SEED
+                ).fit(emb_unreduced.numpy())
+
+        emb = transform.transform(emb_unreduced.numpy())
         emb = torch.Tensor(emb)
-        if train_emb_unreduced is not None:
-            emb = emb[len(train_emb_unreduced):]
+        # if train_emb_unreduced is not None:
+        #     emb = emb[len(train_emb_unreduced):]
     else:
         emb = emb_unreduced
-    return emb, emb_unreduced
+    return emb, transform
 
 
 def make_train_test_model_embeddings(
@@ -530,7 +541,7 @@ def make_train_test_model_embeddings(
             train_models_embeddings[sampling_name][number_item] = {}
             test_models_embeddings[sampling_name][number_item] = {}
             for it in range(iterations):
-                train_models_embeddings[sampling_name][number_item][it], train_emb_unreduced = compute_embedding(
+                train_models_embeddings[sampling_name][number_item][it], transform = compute_embedding(
                     predictions_train,
                     seen_items_dic[sampling_name][number_item][it],
                     pca,
@@ -540,7 +551,7 @@ def make_train_test_model_embeddings(
                     predictions_test,
                     seen_items_dic[sampling_name][number_item][it],
                     pca,
-                    train_emb_unreduced
+                    transform
                 )
     return train_models_embeddings, test_models_embeddings
 
