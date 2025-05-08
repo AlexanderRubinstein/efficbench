@@ -36,16 +36,16 @@ def main():
 
     table_avg = {}
     table_std = {}
-    # model_perf = {} # not used?
+    model_perf = {}
     for bench in benchs:
         table_avg[bench] = {}
         table_std[bench] = {}
-        # model_perf[bench] = {}
+        model_perf[bench] = {}
 
         for split in splits[bench]:
             table_avg[bench][split] = {}
             table_std[bench][split] = {}
-            # model_perf[bench][split] = {}
+            model_perf[bench][split] = {}
 
             if bench == 'mmlu_fields' and split == 'iid':
                 filename_suffix = filename_suffix_mmlu_fields
@@ -77,12 +77,12 @@ def main():
                     ###
                     if results == 'acc':
                         ###
-                        # model_perf[bench][split]['truth'] = winrate(scores, axis=1).mean(axis=0)
-                        # for i,method in enumerate(methods):
-                        #     model_perf[bench][split][method] = {}
-                        #     model_perf[bench][split][method] = {}
-                        # for j,number_item in enumerate(number_items):
-                        #     model_perf[bench][split][method][number_item] = winrate(data, axis=2).mean(axis=3)[i,j,:,:]
+                        model_perf[bench][split]['truth'] = winrate(scores, axis=1).mean(axis=0)
+                        for i,method in enumerate(methods):
+                            model_perf[bench][split][method] = {}
+                            model_perf[bench][split][method] = {}
+                        for j,number_item in enumerate(number_items):
+                            model_perf[bench][split][method][number_item] = winrate(data, axis=2).mean(axis=3)[i,j,:,:]
                         ###
                         data = np.abs(winrate(data, axis=2).mean(axis=3)-winrate(scores, axis=1).mean(axis=0)[None,None,:,None])
                     elif results == 'rank':
@@ -101,12 +101,12 @@ def main():
                     ###
                     if results == 'acc':
                         # ###
-                        # model_perf[bench][split]['truth'] = scores.mean(axis=0)
-                        # for i,method in enumerate(methods):
-                        #     model_perf[bench][split][method] = {}
-                        #     model_perf[bench][split][method] = {}
-                        #     for j,number_item in enumerate(number_items):
-                        #         model_perf[bench][split][method][number_item] = data.mean(axis=3)[i,j,:,:]
+                        model_perf[bench][split]['truth'] = scores.mean(axis=0)
+                        for i,method in enumerate(methods):
+                            model_perf[bench][split][method] = {}
+                            model_perf[bench][split][method] = {}
+                            for j,number_item in enumerate(number_items):
+                                model_perf[bench][split][method][number_item] = data.mean(axis=3)[i,j,:,:]
                         # ###
                         data = np.abs(data.mean(axis=3)-scores.mean(axis=0)[None,None,:,None])
                     elif results == 'rank':
@@ -163,6 +163,8 @@ def main():
     dump_pickle(table_avg, 'results/table_avg.pickle')
 
     dump_pickle(table_std, 'results/table_std.pickle')
+
+    dump_pickle(model_perf, 'results/model_perf.pickle')
 
 
 if __name__ == '__main__':
