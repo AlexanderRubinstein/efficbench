@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 import os
 import argparse
+import requests
+import json
 
 CACHE_DIR = "./cache_dir"
 
@@ -118,7 +120,11 @@ def main():
 
     lb_savepath = args.lb_savepath
 
-    if args.lb_type == "mmlu_fields":
+    if args.lb_type == "helm_lite":
+        print("Downloading HELM Lite")
+        download_helm_lite(args.lb_savepath)
+        return
+    elif args.lb_type == "mmlu_fields":
         model_names = MODELS_NAMES
     else:
         df = pd.read_csv('./generating_data/download-openllmleaderboard/open-llm-leaderboard.csv')
@@ -227,6 +233,52 @@ def skip_model(data, model, scenario_name, skipped_aux, log):
     skipped_aux+=1
     log.append("\nSKIP {:} {:}\n".format(model, scenario_name))
     return skipped_aux
+
+
+def download_helm_lite(lb_savepath):
+
+    def get_json_from_url(url):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+            json_data = response.json()
+            return json_data
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    version_to_run = "v1.0.0"
+    overwrite = False
+    assert lb_savepath is None or lb_savepath == "None", "lb_savepath must be None for helm_lite"
+    df = pd.read_csv('./generating_data/download_helm/helm_lite.csv')
+    tasks_list = list(df.Run)
+    template_url = f"https://storage.googleapis.com/crfm-helm-public/lite/benchmark_output/runs/{version_to_run}"
+    # save_dir = f"/llmthonskdir/felipe/helm/lite/{version_to_run}"
+    save_dir = f"./data/downloaded_helm_lite/{version_to_run}"
+    for tasks in [tasks_list]:
+
+        for task in tqdm(tasks):
+            cur_save_dir = f"{save_dir}/{task}"
+            os.makedirs(cur_save_dir, exist_ok=True)
+
+            for file_type in [
+                    "run_spec",
+                    "stats",
+                    "per_instance_stats",
+                    "instances",
+                    "scenario_state",
+                    "display_predictions",
+                    "display_requests",
+                    "scenario",
+            ]:
+                save_path = f"{cur_save_dir}/{file_type}.json"
+                if os.path.exists(save_path) and not overwrite:
+                    continue
+
+                #https://storage.googleapis.com/crfm-helm-public/benchmark_output/runs/v0.2.2/babi_qa:task=15,model=AlephAlpha_luminous-base/scenario_state.json
+
+                cur_url = f"{template_url}/{task}/{file_type}.json"
+                json.dump(get_json_from_url(cur_url), open(save_path, "w"), indent=2)
 
 
 if __name__ == "__main__":
