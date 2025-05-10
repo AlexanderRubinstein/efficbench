@@ -54,10 +54,14 @@
             "args": [
                 "--filename_suffix_mmlu_fields",
                 // "_disagreement",
-                "_disagreement_debug",
+                // "_disagreement_debug",
+                "_disagreement_compare_with_irt43",
                 // "",
                 "--scenarios_to_skip",
-                "harness_gsm8k_5"
+                "harness_gsm8k_5",
+                "--ordered",
+                "--agg_type",
+                "rank"
             ],
         },
         {
