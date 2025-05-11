@@ -213,7 +213,7 @@ def main():
     parser.add_argument('--results_table_path', type=str, help='results table path', default=None)
     parser.add_argument('--estimators', type=str, help='estimators', default='naive,pirt,cirt,gpirt')
     parser.add_argument('--pca', type=int, help='pca', default=None)
-
+    parser.add_argument('--n_source_models', type=int, help='number of source models', default=None)
     apply_random_seed(RANDOM_SEED)
 
     args = parser.parse_args()
@@ -287,7 +287,8 @@ def main():
         cache=cache,
         chosen_estimators=chosen_estimators,
         chosen_fitting_methods=chosen_fitting_methods,
-        pca=args.pca
+        pca=args.pca,
+        n_source_models=args.n_source_models
     )
 
     if args.cache_path is not None:

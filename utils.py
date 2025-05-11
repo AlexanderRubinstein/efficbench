@@ -167,7 +167,7 @@ def create_responses(chosen_scenarios, scenarios, data):
     responses = hstack_by_attribute_key(chosen_scenarios, scenarios, data, 'correctness')
     return responses
 
-def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
+def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide, n_source_models=None):
     """
     Prepares data based on chosen scenarios and splits it into training and testing sets.
 
@@ -206,6 +206,12 @@ def prepare_and_split_data(chosen_scenarios, scenarios, data, rows_to_hide):
     scores_train, scores_test = split_array_in_train_test(scores, rows_to_hide)
 
     predictions_train, predictions_test = split_array_in_train_test(predictions, rows_to_hide)
+
+    if n_source_models is not None:
+        predictions_train = predictions_train[:n_source_models]
+        # predictions_test = predictions_test[:n_source_models]
+        scores_train = scores_train[:n_source_models]
+        # scores_test = scores_test[:n_source_models]
 
     return (
         scores_train,

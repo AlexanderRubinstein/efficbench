@@ -69,7 +69,8 @@ def evaluate_scenarios(
     cache=None,
     chosen_estimators=None,
     chosen_fitting_methods=None,
-    pca=None
+    pca=None,
+    n_source_models=None
 ):
 
     """
@@ -123,7 +124,8 @@ def evaluate_scenarios(
             chosen_scenarios,
             scenarios,
             data,
-            rows_to_hide
+            rows_to_hide,
+            n_source_models=n_source_models
         )
 
         responses_train = np.zeros(scores_train.shape)
