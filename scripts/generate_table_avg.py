@@ -60,7 +60,7 @@ def main():
                 scenarios_to_skip=args.scenarios_to_skip.split(','),
                 ordered=ordered,
                 return_perf_table=True,
-                results=args.agg_type
+                agg_type=args.agg_type
             )
             # print("DEBUG: current_table_avg", current_table_avg[bench][split].keys())
             table_avg[bench][split] = current_table_avg[bench][split]

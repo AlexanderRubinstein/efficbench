@@ -113,10 +113,12 @@ def compare_dicts_with_arrays(d1, d2, prefix=""):
     return True
 
 
-def merge_methods(table_avg, table_avg_reproduced):
-    for bench in table_avg.keys():
-        for split in table_avg[bench].keys():
-            for method in table_avg_reproduced[bench][split].keys():
-                if method not in table_avg[bench][split].keys():
-                    table_avg[bench][split][method] = table_avg_reproduced[bench][split][method]
-    return table_avg
+def merge_methods(table_avg_base, table_avg_to_merge):
+    if table_avg_base is None:
+        return table_avg_to_merge
+    for bench in table_avg_base.keys():
+        for split in table_avg_base[bench].keys():
+            for method in table_avg_to_merge[bench][split].keys():
+                if method not in table_avg_base[bench][split].keys():
+                    table_avg_base[bench][split][method] = table_avg_to_merge[bench][split][method]
+    return table_avg_base

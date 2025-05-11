@@ -7,7 +7,21 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 #from experiments import *
-from utils import *
+# from utils import *
+from utils import (
+    lb_scenarios,
+    alpaca_scenarios,
+    icl_templates_scenarios,
+    helm_lite_scenarios,
+    # dump_pickle,
+    # load_pickle
+    prepare_data,
+    create_responses
+)
+
+
+MAX_TABLE_SIZE = 1000
+
 
 # Define the new renamings according to the latest instructions
 rename_mappings = {
@@ -334,7 +348,7 @@ def make_table_avg(
     scenarios_to_skip,
     return_perf_table=False,
     ordered=True,
-    results='acc'
+    agg_type='acc'
 ):
     table_avg = {}
     table_std = {}
@@ -346,6 +360,10 @@ def make_table_avg(
 
     agg = 'leaderboard' # 'leaderboard', 'scenarios'
     # results = 'acc'# 'acc', 'rank'
+    if agg_type == "mae":
+        results = "acc"
+    else:
+        results = agg_type
 
     if results == 'acc': ylim = (0,.1)
     elif results == 'rank':

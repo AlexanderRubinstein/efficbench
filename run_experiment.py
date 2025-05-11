@@ -25,6 +25,7 @@ from utils import (
     helm_lite_scenarios
 )
 from plots import (
+    MAX_TABLE_SIZE,
     winrate,
     benchs,
     splits,
@@ -47,7 +48,6 @@ from stnd.utility.utils import apply_random_seed
 
 
 SCENARIOS_TO_SKIP = ['harness_gsm8k_5']
-MAX_TABLE_SIZE = 1000
 
 def get_data(bench, split):
     # Loading data
