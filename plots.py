@@ -271,6 +271,10 @@ def make_perf_table(
                     dict_per_num_anchors[sampling_name]["stratified"] = False
                 else:
                     dict_per_num_anchors[sampling_name]["stratified"] = True
+            else:
+                dict_per_num_anchors[sampling_name]["stratified"] = None
+                dict_per_num_anchors[sampling_name]["PDS type"] = None
+                dict_per_num_anchors[sampling_name]["#guiding_models"] = None
 
     return {num_samples: pd.DataFrame(df_dict[num_samples]).T for num_samples in df_dict.keys()}
 
@@ -279,8 +283,8 @@ def winrate(x,axis):
     n = x.shape[axis]
     return(np.argsort(np.argsort(x, axis=axis), axis=axis)/n)
 
-def load_scores(bench, split, scenarios_to_skip=[], ordered=False):
-    with open(f'results/accs_{bench}_split-{split}_iterations-5.pickle', 'rb') as handle:
+def load_scores(bench, split, scenarios_to_skip=[], ordered=False, filename_suffix='', num_it=5):
+    with open(f'results/accs_{bench}_split-{split}_iterations-{num_it}{filename_suffix}.pickle', 'rb') as handle:
         data = pickle.load(handle)
 
     if bench=='mmlu':
@@ -289,16 +293,26 @@ def load_scores(bench, split, scenarios_to_skip=[], ordered=False):
     elif bench=='alpaca':
         with open(f'data/alpaca_v2.pickle', 'rb') as handle:
             data2 = pickle.load(handle)
-    else:
-        data2_path = f'data/{bench}.pickle' if not ordered else f'data/{bench}_ordered.pickle'
+    elif bench in ['mmlu_fields', 'hellaswag', 'truthfulqa']:
+        pkl_base_name = 'mmlu_fields'
+        if ordered:
+            pkl_base_name = f'{pkl_base_name}_ordered'
+        data2_path = f'data/{pkl_base_name}.pickle'
         with open(data2_path, 'rb') as handle:
             data2 = pickle.load(handle)
+    else:
+        raise NotImplementedError
+
     if bench=='lb':scenarios = lb_scenarios
     elif bench=='mmlu':scenarios = {'mmlu':lb_scenarios['mmlu']}
     elif bench=='helm_lite':scenarios = helm_lite_scenarios
     elif bench=='alpaca':scenarios = alpaca_scenarios
     elif bench=='mmlu_fields':scenarios = {'mmlu':lb_scenarios['mmlu']}
     elif bench=='icl_templates':scenarios = icl_templates_scenarios
+    elif bench in ['hellaswag', 'truthfulqa']:
+        scenarios = {
+            bench: lb_scenarios[bench]
+        }
     else: raise NotImplementedError
 
     filtered_scenarios = {}
@@ -348,7 +362,8 @@ def make_table_avg(
     scenarios_to_skip,
     return_perf_table=False,
     ordered=True,
-    agg_type='acc'
+    agg_type='acc',
+    num_it=5
 ):
     table_avg = {}
     table_std = {}
@@ -376,10 +391,10 @@ def make_table_avg(
     table_std[bench][split] = {}
     model_perf[bench][split] = {}
 
-    if bench == 'mmlu_fields' and split == 'iid':
-        filename_suffix = filename_suffix
-    else:
-        filename_suffix = ''
+    # if bench == 'mmlu_fields' and split == 'iid':
+    #     filename_suffix = filename_suffix
+    # else:
+    #     filename_suffix = ''
 
     # full_results_path = f'results/accs_{bench}_split-{split}_iterations-5{filename_suffix}.pickle'
 
@@ -394,7 +409,7 @@ def make_table_avg(
     scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
 
     data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
-    scores = load_scores(bench, split, scenarios_to_skip=scenarios_to_skip, ordered=ordered)
+    scores = load_scores(bench, split, scenarios_to_skip=scenarios_to_skip, ordered=ordered, filename_suffix=filename_suffix, num_it=num_it)
 
     if agg == 'leaderboard':
         if bench=='helm':

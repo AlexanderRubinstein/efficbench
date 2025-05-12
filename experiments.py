@@ -70,7 +70,8 @@ def evaluate_scenarios(
     chosen_estimators=None,
     chosen_fitting_methods=None,
     pca=None,
-    n_source_models=None
+    n_source_models=None,
+    number_items=[10, 30, 60, 100]
 ):
 
     """
@@ -90,10 +91,22 @@ def evaluate_scenarios(
     - A dictionary containing the updated results.
     """
 
-    assert bench in ['irt_helm_lite', 'irt_lb', 'irt_lb_perf', 'irt_mmlu', 'irt_alpaca', 'irt_mmlu_fields', 'irt_icl_templates']
+    assert bench in [
+        'irt_helm_lite',
+        'irt_lb',
+        'irt_lb_perf',
+        'irt_mmlu',
+        'irt_alpaca',
+        'irt_mmlu_fields',
+        'irt_icl_templates',
+        'irt_truthfulqa',
+        'irt_winogrande',
+        'irt_arc',
+        'irt_hellaswag',
+    ]
     assert any([s in ['random', 'anchor', 'anchor-irt', 'adaptive', 'high-disagreement', 'low-disagreement'] for s in sampling_names]) # [ADD][new sampling]
 
-    number_items = [10, 30, 60, 100]  # Number of items to consider in evaluations
+    # number_items = [10, 30, 60, 100]  # Number of items to consider in evaluations
 
     if cache is not None:
         optionally_make_dir(os.path.dirname(cache["cache_path"]))

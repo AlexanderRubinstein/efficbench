@@ -131,7 +131,7 @@ def get_data(bench, split):
         print(len(set_of_rows[0]), len(data['models']))
 
     # Loading data
-    elif bench == 'mmlu_fields':
+    elif bench in ['mmlu_fields', 'truthfulqa', 'winogrande', 'arc', 'hellaswag']:
 
         mmlu_fields_path = 'data/mmlu_fields_ordered.pickle' # ordered by date in ./generate_plots.ipynb
         # mmlu_fields_path = 'data/mmlu_fields.pickle'
@@ -140,9 +140,12 @@ def get_data(bench, split):
         with open(mmlu_fields_path, 'rb') as handle:
             data = pickle.load(handle)
 
+        scenario_key = 'mmlu' if bench == 'mmlu_fields' else bench
+
         #scenarios
         scenarios = lb_scenarios
-        scenarios = {'mmlu':scenarios['mmlu']}
+        # scenarios = {'mmlu':scenarios['mmlu']}
+        scenarios = {scenario_key: scenarios[scenario_key]}
 
         #split
         if split == 'iid':
@@ -214,6 +217,9 @@ def main():
     parser.add_argument('--estimators', type=str, help='estimators', default='naive,pirt,cirt,gpirt')
     parser.add_argument('--pca', type=int, help='pca', default=None)
     parser.add_argument('--n_source_models', type=int, help='number of source models', default=None)
+    parser.add_argument('--merge_with_original', action='store_true', help='merge with original results table')
+    parser.add_argument('--number_items', type=str, help='number of items', default='10|30|60|100')
+
     apply_random_seed(RANDOM_SEED)
 
     args = parser.parse_args()
@@ -244,7 +250,18 @@ def main():
     iterations = args.iterations
     device = args.device
 
-    assert bench in ['helm_lite','lb','mmlu','alpaca','mmlu_fields','icl_templates']
+    assert bench in [
+        'helm_lite',
+        'lb',
+        'mmlu',
+        'alpaca',
+        'mmlu_fields',
+        'icl_templates',
+        'truthfulqa',
+        'winogrande',
+        'arc',
+        'hellaswag'
+    ]
     assert split in ['iid','noniid','noniid2','noniid3']
     assert iterations>0
 
@@ -288,7 +305,8 @@ def main():
         chosen_estimators=chosen_estimators,
         chosen_fitting_methods=chosen_fitting_methods,
         pca=args.pca,
-        n_source_models=args.n_source_models
+        n_source_models=args.n_source_models,
+        number_items=[int(item) for item in args.number_items.split('|')]
     )
 
     if args.cache_path is not None:
@@ -316,13 +334,15 @@ def main():
             filename_suffix,
             accs_full,
             scenarios_to_skip=SCENARIOS_TO_SKIP,
+            num_it=iterations
         )
         make_results_table(
             table_avg,
             table_std,
             bench,
             args.results_table_path,
-            split
+            split,
+            merge_with_original=args.merge_with_original
         )
 
 
@@ -470,21 +490,22 @@ def main():
 #     return res
 
 
-def make_results_table(table_avg, table_std, bench, results_table_path, split):
+def make_results_table(table_avg, table_std, bench, results_table_path, split, merge_with_original=True):
 
     agg = 'leaderboard' # 'leaderboard', 'scenarios'
     results = 'acc'# 'acc', 'rank'
 
     style = {"alpha":1, "markersize":3, "markeredgewidth":1, "elinewidth":1, "capsize":3, "linestyle":''}
 
-    # Load table_avg from pickle file
-    with open('results/table_avg_original.pickle', 'rb') as handle:
-        table_avg_original = pickle.load(handle)
-    with open('results/table_std_original.pickle', 'rb') as handle:
-        table_std_original = pickle.load(handle)
+    if merge_with_original:
+        # Load table_avg from pickle file
+        with open('results/table_avg_original.pickle', 'rb') as handle:
+            table_avg_original = pickle.load(handle)
+        with open('results/table_std_original.pickle', 'rb') as handle:
+            table_std_original = pickle.load(handle)
 
-    table_avg = merge_methods(table_avg, table_avg_original)
-    table_std = merge_methods(table_std, table_std_original)
+        table_avg = merge_methods(table_avg, table_avg_original)
+        table_std = merge_methods(table_std, table_std_original)
 
     if results == 'acc': ylim = (0,.1)
     elif results == 'rank':
@@ -492,7 +513,7 @@ def make_results_table(table_avg, table_std, bench, results_table_path, split):
         else: ylim = (.5,1)
     else: raise NotImplementedError
 
-    cur_methods_for_table = table_avg["mmlu_fields"][split].keys()
+    cur_methods_for_table = table_avg[bench][split].keys()
 
     df = make_perf_table(
         table_avg[bench][split],
