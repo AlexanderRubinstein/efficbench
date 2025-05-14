@@ -218,7 +218,7 @@ def main():
     parser.add_argument('--pca', type=int, help='pca', default=None)
     parser.add_argument('--n_source_models', type=int, help='number of source models', default=None)
     parser.add_argument('--merge_with_original', action='store_true', help='merge with original results table')
-    parser.add_argument('--number_items', type=str, help='number of items', default='10|30|60|100')
+    parser.add_argument('--number_items', type=str, help='number of items', default='10,30,60,100')
 
     apply_random_seed(RANDOM_SEED)
 
@@ -306,7 +306,7 @@ def main():
         chosen_fitting_methods=chosen_fitting_methods,
         pca=args.pca,
         n_source_models=args.n_source_models,
-        number_items=[int(item) for item in args.number_items.split('|')]
+        number_items=[int(item) for item in args.number_items.split(',')]
     )
 
     if args.cache_path is not None:
