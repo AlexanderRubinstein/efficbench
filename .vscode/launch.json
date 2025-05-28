@@ -1,0 +1,161 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Benjamin Plot Final",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "./tmp/model-selection/notebooks/plot_final.py",
+            "args": [
+                "--scoring_function",
+                "mae",
+                // "rank",
+                "--linear",
+                // "MLP",
+                "RF",
+                "--number_bootstraping_steps",
+                "2",
+                "--pca_comp",
+                // "256",
+                // "64",
+                // "32",
+                "16",
+                // "2",
+                "--model_type",
+                "timm",
+                // "openclip",
+                "--n_source_models",
+                // "40",
+                // "50",
+                // "50",
+                // "16",
+                "100",
+                // "200",
+                // "350",
+                // "75",
+                // "--gpu_id",
+                // "6"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Experiment",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run_experiment.py",
+            "args": [
+                "--bench",
+                // "mmlu",
+                "mmlu_fields",
+                // "truthfulqa",
+                // "hellaswag",
+                "--split",
+                // "iid",
+                "noniid",
+                "--iterations",
+                // "5",
+                "2",
+                "--device",
+                "cuda",
+                "--skip_irt",
+                "--cache_path",
+                "cache/mmlu_fields_iid_5_cuda_02052025.pickle",
+                // "cache/debug_truthful.pickle",
+                // "cache/debug_hellaswag.pickle",
+                // "cache/mmlu_fields_iid_5_cuda_03052025_gsheet.pickle",
+                "--num_workers",
+                "4",
+                "--sampling_names",
+                // "random,high-disagreement,low-disagreement,low-disagreement@2,high-disagreement@2,low-disagreement@10,high-disagreement@10,low-disagreement@100,high-disagreement@100",
+                "random,high-disagreement+nonstratified",
+                // "random,high-disagreement",
+                "--filename_suffix",
+                "_disagreement_debug",
+                // "_reproduced"
+                // "--pca",
+                // "128",
+                "--make_results_table",
+                "--estimators",
+                // "Ridge_10,MLP2_e200_lr0.001"
+                // "best",
+                "GradientBoostingRegressor_200",
+                "--number_items",
+                "100",
+                // "--n_source_models",
+                // "3",
+                // "mlp"
+                // "MLP3_e200_lr0.001__COMMA__MLP3_e300_lr0.001__COMMA__MLP3_e400_lr0.001__COMMA__MLP3_e200_lr0.0001__COMMA__MLP3_e500_lr0.001__COMMA__MLP3_e500_lr0.0001__COMMA__MLP3_e600_lr0.001"
+            ],
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "Generate Table Average",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/generate_table_avg.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--filename_suffix_mmlu_fields",
+                // "_disagreement",
+                // "_disagreement_debug",
+                "_disagreement_compare_with_irt43",
+                // "",
+                "--scenarios_to_skip",
+                "harness_gsm8k_5",
+                "--ordered",
+                "--agg_type",
+                "rank"
+            ],
+        },
+        {
+            "name": "Download Leaderboard",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "scripts/download_leaderboard.py",
+            "args": [
+                "--lb_type",
+                // "mmlu_fields",
+                // "openllm_leaderboard",
+                "helm_lite",
+                "--lb_savepath",
+                // "data/leaderboard_fields_raw_22042025.pickle"
+                // "./data/leaderboard_raw_25042025.pickle"
+                "None"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Experiment debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run_experiment.py",
+            "args": [
+                "--bench",
+                "mmlu_fields",
+                "--cache_path",
+                "/weka/oh/arubinstein17/github/efficbench/cache/efficbench-run_exp/mmlu_fields_iid25634_debug.pickle",
+                "--device",
+                "cuda",
+                "--estimators",
+                "GradientBoostingRegressor_200,RandomForestRegressor_100",
+                "--filename_suffix",
+                "_disagreement",
+                "--iterations",
+                "5",
+                "--num_workers",
+                "4",
+                "--pca",
+                "256",
+                "--sampling_names",
+                "random,high-disagreement@100+nonstratified,anchor,anchor-irt",
+                "--split",
+                "iid",
+                "--make_results_table"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

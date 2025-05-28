@@ -3,11 +3,51 @@ import copy
 import pandas as pd
 import argparse
 from scipy import stats
-from experiments import *
-from utils import *
+import os
+import numpy as np
+# from experiments import *
+from experiments import (
+    RANDOM_SEED,
+    evaluate_scenarios
+)
+from utils import (
+    lb_scenarios,
+    # get_lambda,
+    # SuppressPrints,
+    # sigmoid,
+    # item_curve,
+    # item_response_function,
+    # prepare_data,
+    dump_pickle,
+    load_pickle,
+    alpaca_scenarios,
+    icl_templates_scenarios,
+    helm_lite_scenarios
+)
+from plots import (
+    MAX_TABLE_SIZE,
+    winrate,
+    benchs,
+    splits,
+    methods,
+    # number_items,
+    agg_metric,
+    load_scores,
+    make_perf_table,
+    make_table_avg
+)
+from acc import (
+    ESTIMATORS,
+    FITTING_METHODS,
+    BASE_ESTIMATORS,
+    BEST_FITTING_METHODS,
+    MLP_FITTING_METHODS
+)
+from generating_data.utils_for_notebooks import merge_methods
+from stnd.utility.utils import apply_random_seed
 
-#python run_experiment.py --bench 'mmlu' --split 'iid' --iterations 5 --device 'cuda'
-#python run_experiment.py --bench 'helm_lite' --split 'noniid' --iterations 5 --device 'cuda'
+
+SCENARIOS_TO_SKIP = ['harness_gsm8k_5']
 
 def get_data(bench, split):
     # Loading data
@@ -27,7 +67,7 @@ def get_data(bench, split):
         elif split == 'noniid2':
             set_of_rows = [list(range(200))]
         elif split == 'noniid3':
-            set_of_rows = [list(range(300))] 
+            set_of_rows = [list(range(300))]
 
         print(len(set_of_rows[0]), len(data['models']))
 
@@ -42,8 +82,8 @@ def get_data(bench, split):
         #split
         if split == 'iid':
             set_of_rows = [[0,11,22],
-                           [1,12,23], 
-                           [2,13,24], 
+                           [1,12,23],
+                           [2,13,24],
                            [3,14,25],
                            [4,15,26],
                            [5,16,27],
@@ -51,7 +91,7 @@ def get_data(bench, split):
                            [7,18,29],
                            [8,19],
                            [9,20],
-                           [10,21]] 
+                           [10,21]]
         else:
             set_of_rows = [[0,1], #AI: Yi
                            [2,3,4], #AlephAlpha_luminous
@@ -87,19 +127,25 @@ def get_data(bench, split):
             set_of_rows = [list(range(50))]
         elif split == 'noniid3':
             set_of_rows = [list(range(75))]
- 
+
         print(len(set_of_rows[0]), len(data['models']))
 
     # Loading data
-    elif bench == 'mmlu_fields':
+    elif bench in ['mmlu_fields', 'truthfulqa', 'winogrande', 'arc', 'hellaswag']:
+
+        mmlu_fields_path = 'data/mmlu_fields_ordered.pickle' # ordered by date in ./generate_plots.ipynb
+        # mmlu_fields_path = 'data/mmlu_fields.pickle'
 
         #data
-        with open('data/mmlu_fields.pickle', 'rb') as handle:
+        with open(mmlu_fields_path, 'rb') as handle:
             data = pickle.load(handle)
+
+        scenario_key = 'mmlu' if bench == 'mmlu_fields' else bench
 
         #scenarios
         scenarios = lb_scenarios
-        scenarios = {'mmlu':scenarios['mmlu']}
+        # scenarios = {'mmlu':scenarios['mmlu']}
+        scenarios = {scenario_key: scenarios[scenario_key]}
 
         #split
         if split == 'iid':
@@ -134,7 +180,7 @@ def get_data(bench, split):
             set_of_rows = [[i for i,m in enumerate(data['models']) if np.sum([t in m for t in temp])>0] for temp in templates]
 
         elif split == 'noniid2': #size
-            sizes = [['65b']] 
+            sizes = [['65b']]
             set_of_rows = [[i for i,m in enumerate(data['models']) if np.sum([t in m for t in size])>0] for size in sizes]
 
         elif split == 'noniid3': #same vs cross instr
@@ -144,53 +190,359 @@ def get_data(bench, split):
         else:
             raise NotImplementedError
 
-        print(len(set_of_rows[0]), len(data['models'])) 
+        print(len(set_of_rows[0]), len(data['models']))
 
     else:
         raise NotImplementedError
-    
+
     return data, scenarios, set_of_rows
 
 
-if __name__ == "__main__":
-    
+def main():
+
     # User input
     parser = argparse.ArgumentParser(description='Example script with named arguments.')
 
-    parser.add_argument('--bench', type=str, help='Benchmark (helm_lite, lb, mmlu, alpaca, icl_templates)', default = 'lb')
-    parser.add_argument('--split', type=str, help='iid/noniid/noniid2/noniid3', default = 'iid')
-    parser.add_argument('--iterations', type=int, help='iterations', default = 3)
-    parser.add_argument('--device', type=str, help='cpu/cuda', default = 'cpu')
+    parser.add_argument('--bench', type=str, help='Benchmark (helm_lite, lb, mmlu, alpaca, icl_templates)', default='lb')
+    parser.add_argument('--split', type=str, help='iid/noniid/noniid2/noniid3', default='iid')
+    parser.add_argument('--iterations', type=int, help='iterations', default=3)
+    parser.add_argument('--device', type=str, help='cpu/cuda', default='cpu')
+    parser.add_argument('--num_workers', type=int, help='number of workers', default=12)
+    parser.add_argument('--skip_irt', action='store_true', help='skip irt')
+    parser.add_argument('--cache_path', type=str, help='cache path', default=None)
+    parser.add_argument('--sampling_names', type=str, help='sampling names', default='random,anchor,anchor-irt')
+    parser.add_argument('--filename_suffix', type=str, help='path suffix', default='')
+    parser.add_argument('--make_results_table', action='store_true', help='make results table')
+    parser.add_argument('--results_table_path', type=str, help='results table path', default=None)
+    parser.add_argument('--estimators', type=str, help='estimators', default='naive,pirt,cirt,gpirt')
+    parser.add_argument('--pca', type=int, help='pca', default=None)
+    parser.add_argument('--n_source_models', type=int, help='number of source models', default=None)
+    parser.add_argument('--merge_with_original', action='store_true', help='merge with original results table')
+    parser.add_argument('--number_items', type=str, help='number of items', default='10,30,60,100')
+
+    apply_random_seed(RANDOM_SEED)
 
     args = parser.parse_args()
+
+    if args.estimators is None or args.estimators == 'all':
+        chosen_estimators = ESTIMATORS
+        chosen_fitting_methods = FITTING_METHODS
+    elif args.estimators == 'best':
+        chosen_fitting_methods = BEST_FITTING_METHODS
+        chosen_estimators = BASE_ESTIMATORS + [f[0] for f in BEST_FITTING_METHODS]
+    elif args.estimators == 'mlp':
+        chosen_fitting_methods = MLP_FITTING_METHODS
+        chosen_estimators = BASE_ESTIMATORS + [f[0] for f in MLP_FITTING_METHODS]
+    else:
+        assert isinstance(args.estimators, str), "estimators must be a string"
+        estimators = args.estimators.replace('__COMMA__', ',').split(',')
+        chosen_estimators = [e for e in ESTIMATORS if e in estimators or e in BASE_ESTIMATORS]
+        chosen_fitting_methods = [f for f in FITTING_METHODS if f[0] in estimators]
+
+    if args.results_table_path is None and args.make_results_table:
+        if args.cache_path is not None:
+            args.results_table_path = args.cache_path.replace('.pickle', '.csv')
+        else:
+            args.results_table_path = f'default_df_run_experiment.csv'
+
     bench = args.bench
     split = args.split
     iterations = args.iterations
     device = args.device
 
-    assert bench in ['helm_lite','lb','mmlu','alpaca','mmlu_fields','icl_templates']
+    assert bench in [
+        'helm_lite',
+        'lb',
+        'mmlu',
+        'alpaca',
+        'mmlu_fields',
+        'icl_templates',
+        'truthfulqa',
+        'winogrande',
+        'arc',
+        'hellaswag'
+    ]
     assert split in ['iid','noniid','noniid2','noniid3']
     assert iterations>0
 
     # Defining other parameters
     Ds = [2, 5, 10, 15]
-    sampling_names = ['random', 'anchor', 'anchor-irt']# or ['adaptive'] 
+    sampling_names = args.sampling_names.split(',')
 
     scenario_name = 'full' #we are evaluating all scenarios at once (this is just a nomination)
 
     data, scenarios, set_of_rows = get_data(bench, split)
-    
+
     chosen_scenarios = list(scenarios.keys())
 
+    if args.cache_path is not None:
+        if os.path.exists(args.cache_path):
+            cache = load_pickle(args.cache_path)
+        else:
+            dirname = os.path.dirname(args.cache_path)
+            if dirname != '':
+                os.makedirs(dirname, exist_ok=True)
+            cache = {"cache_path": args.cache_path}
+    else:
+        cache = None
 
     # ## Results
-    results_full, accs_full, sampling_time_dic = evaluate_scenarios(data, scenario_name, chosen_scenarios, scenarios, set_of_rows, Ds, iterations, device, bench='irt_'+bench, split=split, sampling_names = sampling_names)
+    results_full, accs_full, sampling_time_dic = evaluate_scenarios(
+        data,
+        scenario_name,
+        chosen_scenarios,
+        scenarios,
+        set_of_rows,
+        Ds,
+        iterations,
+        device,
+        bench='irt_'+bench,
+        split=split,
+        sampling_names=sampling_names,
+        num_workers=args.num_workers,
+        skip_irt=args.skip_irt,
+        cache=cache,
+        chosen_estimators=chosen_estimators,
+        chosen_fitting_methods=chosen_fitting_methods,
+        pca=args.pca,
+        n_source_models=args.n_source_models,
+        number_items=[int(item) for item in args.number_items.split(',')]
+    )
 
-    with open(f'results/results_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    if args.cache_path is not None:
+        dump_pickle(cache, args.cache_path)
+
+    filename_suffix = args.filename_suffix
+
+    results_full_path = f'results/results_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
+    accs_full_path = f'results/accs_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
+    samplingtime_full_path = f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}{filename_suffix}.pickle'
+
+    with open(results_full_path, 'wb') as handle:
         pickle.dump(results_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(f'results/accs_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    with open(accs_full_path, 'wb') as handle:
         pickle.dump(accs_full, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    with open(f'results/samplingtime_{bench}_split-{split}_iterations-{iterations}.pickle', 'wb') as handle:
+    with open(samplingtime_full_path, 'wb') as handle:
         pickle.dump(sampling_time_dic, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    if args.make_results_table:
+        table_avg, table_std = make_table_avg(
+            bench,
+            split,
+            filename_suffix,
+            accs_full,
+            scenarios_to_skip=SCENARIOS_TO_SKIP,
+            num_it=iterations
+        )
+        make_results_table(
+            table_avg,
+            table_std,
+            bench,
+            args.results_table_path,
+            split,
+            merge_with_original=args.merge_with_original
+        )
+
+
+# def make_table_avg(
+#     bench,
+#     split,
+#     filename_suffix,
+#     accs_full,
+#     scenarios_to_skip,
+#     return_perf_table=False
+# ):
+#     table_avg = {}
+#     table_std = {}
+#     model_perf = {} # not used?
+#     # for bench in benchs:
+#     table_avg[bench] = {}
+#     table_std[bench] = {}
+#     model_perf[bench] = {}
+
+#     agg = 'leaderboard' # 'leaderboard', 'scenarios'
+#     results = 'acc'# 'acc', 'rank'
+
+#     if results == 'acc': ylim = (0,.1)
+#     elif results == 'rank':
+#         if agg_metric == 'std': ylim = (0,.1)
+#         else: ylim = (.5,1)
+#     else: raise NotImplementedError
+
+#     # for split in splits[bench]:
+#     table_avg[bench][split] = {}
+#     table_std[bench][split] = {}
+#     model_perf[bench][split] = {}
+
+#     if bench == 'mmlu_fields' and split == 'iid':
+#         filename_suffix = filename_suffix
+#     else:
+#         filename_suffix = ''
+
+#     # full_results_path = f'results/accs_{bench}_split-{split}_iterations-5{filename_suffix}.pickle'
+
+#     # with open(full_results_path, 'rb') as handle:
+#     #     data = pickle.load(handle)
+
+#     data = accs_full
+
+#     models = list(data.keys())
+#     number_items = list(data[models[0]].keys())
+#     methods = list(data[models[0]][number_items[0]].keys())
+#     scenarios = list(data[models[0]][number_items[0]][methods[0]].keys())
+
+#     data = np.array([[[[data[model][number_item][method][scenario] for scenario in scenarios]  for model in data.keys()] for number_item in number_items] for method in methods])
+#     scores = load_scores(bench, split, scenarios_to_skip=scenarios_to_skip, ordered=True)
+
+#     if agg == 'leaderboard':
+#         if bench=='helm':
+#             ###
+#             if results == 'acc':
+#                 ###
+#                 model_perf[bench][split]['truth'] = winrate(scores, axis=1).mean(axis=0)
+#                 for i,method in enumerate(methods):
+#                     model_perf[bench][split][method] = {}
+#                     model_perf[bench][split][method] = {}
+#                 for j,number_item in enumerate(number_items):
+#                     model_perf[bench][split][method][number_item] = winrate(data, axis=2).mean(axis=3)[i,j,:,:]
+#                 ###
+#                 data = np.abs(winrate(data, axis=2).mean(axis=3)-winrate(scores, axis=1).mean(axis=0)[None,None,:,None])
+#             elif results == 'rank':
+#                 rank_corrs = np.zeros(data.mean(axis=2).mean(axis=2).shape)
+#                 #print(bench,rank_corrs.shape)
+#                 for i in range(rank_corrs.shape[0]):
+#                     for j in range(rank_corrs.shape[1]):
+#                         for l in range(rank_corrs.shape[2]):
+#                             #print(winrate(data, axis=2).mean(axis=3).shape)
+#                             rank_corrs[i,j,l] = stats.spearmanr(winrate(data, axis=2).mean(axis=3)[i,j,:,l], winrate(scores.T, axis=0).mean(axis=1)).statistic
+#                 data=rank_corrs
+
+#             else:
+#                 raise NotImplementedError
+#         else:
+#             ###
+#             if results == 'acc':
+
+#                 # ###
+#                 model_perf[bench][split]['truth'] = scores.mean(axis=0)
+#                 for i,method in enumerate(methods):
+#                     model_perf[bench][split][method] = {}
+#                     model_perf[bench][split][method] = {}
+#                     for j,number_item in enumerate(number_items):
+#                         model_perf[bench][split][method][number_item] = data.mean(axis=3)[i,j,:,:]
+#                 # ###
+
+#                 data = np.abs(data.mean(axis=3)-scores.mean(axis=0)[None,None,:,None])
+#             elif results == 'rank':
+#                 rank_corrs = np.zeros(data.mean(axis=2).mean(axis=2).shape)
+#                 #print(bench,rank_corrs.shape)
+#                 for i in range(rank_corrs.shape[0]):
+#                     for j in range(rank_corrs.shape[1]):
+#                         for l in range(rank_corrs.shape[2]):
+#                             #print(data.mean(axis=3).shape)
+#                             rank_corrs[i,j,l] = stats.spearmanr(data.mean(axis=3)[i,j,:,l], scores.T.mean(axis=1)).statistic
+#                 data=rank_corrs
+#             else:
+#                 raise NotImplementedError
+#     elif agg == 'scenarios':
+#         if results == 'acc':
+#             data = np.abs(data-scores.T[None,None,:,:,None]).mean(axis=3)
+#         elif results == 'rank':
+#             rank_corrs = np.zeros(data.mean(axis=2).shape)
+#             for i in range(rank_corrs.shape[0]):
+#                 for j in range(rank_corrs.shape[1]):
+#                     for k in range(rank_corrs.shape[2]):
+#                         for l in range(rank_corrs.shape[3]):
+#                             rank_corrs[i,j,k,l] = stats.spearmanr(data[i,j,:,k,l], scores.T[:,k]).statistic
+#             data=rank_corrs
+#         else:
+#             raise NotImplementedError
+#     else:
+#         raise NotImplementedError
+
+#     if agg_metric=='avg':
+#         data = data.mean(-1) #iterations
+#     elif agg_metric=='std':
+#         data = data.std(-1)
+#     else:
+#         raise NotImplementedError
+
+
+#     for i,method in enumerate(methods):
+#         table_avg[bench][split][method] = {}
+#         table_std[bench][split][method] = {}
+
+#         for j,number_item in enumerate(number_items):
+#             if agg == 'leaderboard' and results == 'rank':
+#                 #print(data.shape)
+#                 table_avg[bench][split][method][number_item] = data[i,j]
+#                 table_std[bench][split][method][number_item] = 0
+#             else:
+#                 #print(data.shape)
+#                 table_avg[bench][split][method][number_item] = np.mean(data, axis=-1)[i,j]
+#                 table_std[bench][split][method][number_item] = data.std(-1)[i,j]
+
+#     res = [table_avg, table_std]
+#     if return_perf_table:
+#         res = res + [model_perf]
+#     return res
+
+
+def make_results_table(table_avg, table_std, bench, results_table_path, split, merge_with_original=True):
+
+    agg = 'leaderboard' # 'leaderboard', 'scenarios'
+    results = 'acc'# 'acc', 'rank'
+
+    style = {"alpha":1, "markersize":3, "markeredgewidth":1, "elinewidth":1, "capsize":3, "linestyle":''}
+
+    if merge_with_original:
+        # Load table_avg from pickle file
+        with open('results/table_avg_original.pickle', 'rb') as handle:
+            table_avg_original = pickle.load(handle)
+        with open('results/table_std_original.pickle', 'rb') as handle:
+            table_std_original = pickle.load(handle)
+
+        table_avg = merge_methods(table_avg, table_avg_original)
+        table_std = merge_methods(table_std, table_std_original)
+
+    if results == 'acc': ylim = (0,.1)
+    elif results == 'rank':
+        if agg_metric == 'std': ylim = (0,.1)
+        else: ylim = (.5,1)
+    else: raise NotImplementedError
+
+    cur_methods_for_table = table_avg[bench][split].keys()
+
+    df = make_perf_table(
+        table_avg[bench][split],
+        table_std[bench][split],
+        methods=cur_methods_for_table,
+    )
+
+    pd.set_option('display.max_rows', MAX_TABLE_SIZE)
+    pd.set_option('display.max_columns', MAX_TABLE_SIZE)
+    pd.set_option(
+        "display.max_colwidth", MAX_TABLE_SIZE
+    )
+    for num_samples in df.keys():
+        print("#anchor_points:", num_samples)
+        # Reorder columns to put guiding models, PDS type, and stratified first
+        cols = df[num_samples].columns.tolist()
+        first_cols = ['#guiding_models', 'PDS type', 'stratified']
+        other_cols = [col for col in cols if col not in first_cols]
+        df[num_samples] = df[num_samples][first_cols + other_cols]
+
+        # Replace all values in #guiding_models column with 382
+        df[num_samples].loc[df[num_samples]['#guiding_models'] == 'all', '#guiding_models'] = 382
+
+        # Sort rows by #guiding_models
+        df[num_samples] = df[num_samples].sort_values(['PDS type', 'stratified', '#guiding_models'])
+
+        print(df[num_samples])
+
+    df[max(list(df.keys()))].to_csv(results_table_path)
+
+if __name__ == "__main__":
+    main()

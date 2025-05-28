@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from glob import glob 
+from glob import glob
 import pickle as pkl
 import numpy as np
 from datetime import datetime
@@ -98,10 +98,10 @@ def main() -> None:
                 except TypeError:
                     correctness = 0
                     missing = 1
-        
+
                 missing_data.append(missing)
                 model_correctness.append(correctness)
-            
+
             data_final[version]["correctness"].append(model_correctness)
             data_final[version]["missing_data"].append(missing_data)
         else:
@@ -126,7 +126,6 @@ def main() -> None:
 
     dates = [dates[model] for model in alpaca_eval_results['models']]
     order = np.argsort(np.array(dates))[::-1]
-
 
     alpaca_eval_results['data'][version]['correctness'] = alpaca_eval_results['data'][version]['correctness'][:,order]
     alpaca_eval_results['models'] = np.array(alpaca_eval_results['models'])[order].tolist()
